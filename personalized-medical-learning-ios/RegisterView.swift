@@ -11,6 +11,7 @@ struct RegisterView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = RegisterViewModel()
     @State private var didRegister = false
+    @State private var didFinishOnboarding = false
 
     private let years = Array(1...6)
 
@@ -87,7 +88,10 @@ struct RegisterView: View {
             .background(Theme.bg)
         }
         .fullScreenCover(isPresented: $didRegister) {
-            RootView()
+            OnboardingView(onFinish: { didFinishOnboarding = true })
+                .fullScreenCover(isPresented: $didFinishOnboarding) {
+                    RootView()
+                }
         }
     }
 
