@@ -13,50 +13,56 @@ struct SubjectsView: View {
     @State private var selectedSubject: Subject? = SubjectData.subjects.first
 
     var body: some View {
-        ScrollView {
-            Group {
-                if horizontalSizeClass == .regular {
-                    HStack(alignment: .top, spacing: 24) {
-                        Group {
-                            if selectedSubject == nil {
-                                listPane.frame(maxWidth: .infinity)
-                            } else {
-                                listPane.frame(width: 380)
-                            }
-                        }
-
-                        if selectedSubject != nil {
-                            detailPane
-                                .frame(maxWidth: .infinity)
+        Group {
+            if horizontalSizeClass == .regular {
+                HStack(alignment: .top, spacing: 24) {
+                    Group {
+                        if selectedSubject == nil {
+                            listPane.frame(maxWidth: .infinity)
+                        } else {
+                            listPane.frame(width: 380)
                         }
                     }
-                } else {
+
+                    if selectedSubject != nil {
+                        detailPane
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         listPane
                         detailPane
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
+                    .padding(.bottom, 24)
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
-            .padding(.bottom, 24)
         }
+        .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 0)
+        .padding(.top, horizontalSizeClass == .regular ? 24 : 0)
+        .padding(.bottom, horizontalSizeClass == .regular ? 24 : 0)
         .background(Theme.bg)
     }
 
     private var listPane: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            header
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                header
 
-            SubjectTabBar(selectedTab: $selectedTab)
+                SubjectTabBar(selectedTab: $selectedTab)
 
-            VStack(spacing: 14) {
-                ForEach(SubjectData.subjects) { subject in
-                    SubjectRow(
-                        subject: subject,
-                        isSelected: subject.id == selectedSubject?.id
-                    )
-                    .onTapGesture { selectedSubject = subject }
+                VStack(spacing: 14) {
+                    ForEach(SubjectData.subjects) { subject in
+                        SubjectRow(
+                            subject: subject,
+                            isSelected: subject.id == selectedSubject?.id
+                        )
+                        .onTapGesture { selectedSubject = subject }
+                    }
                 }
             }
         }
@@ -65,7 +71,9 @@ struct SubjectsView: View {
     @ViewBuilder
     private var detailPane: some View {
         if let selectedSubject {
-            SubjectDetailView(subject: selectedSubject, onBack: { self.selectedSubject = nil })
+            ScrollView {
+                SubjectDetailView(subject: selectedSubject, onBack: { self.selectedSubject = nil })
+            }
         }
     }
 
