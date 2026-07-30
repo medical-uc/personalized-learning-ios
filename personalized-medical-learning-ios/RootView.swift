@@ -31,6 +31,8 @@ struct RootView: View {
                     }
                 case .flashcards:
                     FlashcardView(onBack: { selection = .dashboard })
+                case .subjects:
+                    SubjectsView(onBack: { selection = .dashboard })
                 default:
                     DashboardView()
                 }
