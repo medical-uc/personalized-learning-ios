@@ -65,14 +65,9 @@ private struct HeroCard: View {
                             .clipShape(Capsule())
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        ProgressView(value: subject.progress)
-                            .tint(Theme.dark)
-                        Text("\(subject.masteredConcepts) / \(subject.concepts) concepts mastered")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: 420)
+                    Text("\(subject.masteredConcepts) / \(subject.concepts) concepts mastered")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
                     Text(subject.description)
                         .font(.subheadline)
@@ -204,11 +199,8 @@ private struct TopicRow: View {
 
             Text("\(Int(topic.progress * 100))%")
                 .font(.subheadline.weight(.semibold))
+                .foregroundStyle(progressColor)
                 .frame(width: 44, alignment: .trailing)
-
-            ProgressView(value: topic.progress)
-                .tint(progressColor)
-                .frame(width: 120)
 
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(topic.concepts) concepts").font(.caption2).foregroundStyle(.secondary)

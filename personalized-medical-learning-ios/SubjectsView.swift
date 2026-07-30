@@ -132,13 +132,9 @@ private struct SubjectRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(subject.name).font(.subheadline.bold())
 
-                HStack(spacing: 8) {
-                    ProgressView(value: subject.progress)
-                        .tint(Theme.dark)
-                    Text("\(Int(subject.progress * 100))%")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
+                Text("\(Int(subject.progress * 100))%")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
 
                 Text("\(subject.concepts) concepts · \(subject.questions) questions · \(subject.flashcards) flashcards")
                     .font(.caption2)
