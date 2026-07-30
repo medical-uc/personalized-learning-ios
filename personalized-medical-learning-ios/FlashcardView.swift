@@ -43,6 +43,8 @@ struct FlashcardView: View {
 private struct FlashcardHeaderView: View {
     var onBack: () -> Void
 
+    @State private var isProgressPresented = false
+
     var body: some View {
         HStack {
             Button(action: onBack) {
@@ -55,6 +57,24 @@ private struct FlashcardHeaderView: View {
             }
 
             Spacer()
+
+            Button {
+                isProgressPresented = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.pie")
+                    Text("Progress")
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.dark)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .popover(isPresented: $isProgressPresented) {
+                FlashcardProgressPopoverContent()
+            }
 
             Button {} label: {
                 Image(systemName: "bookmark")

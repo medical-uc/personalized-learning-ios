@@ -8,15 +8,26 @@ import SwiftUI
 struct FlashcardSidePanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            StudyProgressCard()
-            TodayStatsCard()
             DeckCard()
             QuickActionsCard()
         }
     }
 }
 
-private struct StudyProgressCard: View {
+struct FlashcardProgressPopoverContent: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                StudyProgressCard()
+                TodayStatsCard()
+            }
+            .padding(20)
+        }
+        .frame(width: 340, height: 560)
+    }
+}
+
+struct StudyProgressCard: View {
     private var progress: Double {
         Double(FlashcardData.cardsStudied) / Double(FlashcardData.cardsGoal)
     }
