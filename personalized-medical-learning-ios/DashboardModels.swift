@@ -7,12 +7,9 @@ import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
-    case dailyTask = "Daily Task"
     case quiz = "Quiz"
     case subjects = "Subjects"
     case flashcards = "Flashcards"
-    case practice = "Practice"
-    case leaderboard = "Leaderboard"
     case bookmarks = "Bookmarks"
     case history = "History"
     case settings = "Settings"
@@ -22,12 +19,9 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .dashboard: return "house.fill"
-        case .dailyTask: return "calendar"
         case .quiz: return "questionmark.circle"
         case .subjects: return "book"
         case .flashcards: return "rectangle.stack"
-        case .practice: return "doc.text"
-        case .leaderboard: return "trophy"
         case .bookmarks: return "bookmark"
         case .history: return "clock"
         case .settings: return "gearshape"
