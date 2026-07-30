@@ -18,14 +18,14 @@ final class RegisterViewModel: ObservableObject {
         self.client = client
     }
 
-    func register(name: String, academicYear: Int) async {
+    func register(fullName: String, studentNumber: String, academicYear: Int) async {
         errorMessage = nil
         isSubmitting = true
         defer { isSubmitting = false }
 
         do {
-            let response = try await client.registerStudent(name: name, academicYear: academicYear)
-            studentId = response.studentId
+            let response = try await client.registerStudent(fullName: fullName, studentNumber: studentNumber, academicYear: academicYear)
+            self.studentId = response.studentId
             UserDefaults.standard.set(response.studentId, forKey: "studentId")
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription

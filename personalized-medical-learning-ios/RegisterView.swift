@@ -56,13 +56,12 @@ struct RegisterView: View {
                     Spacer(minLength: 12)
 
                     Button {
-                        // Task {
-                        //     await viewModel.register(name: fullName, academicYear: academicYear)
-                        //     if viewModel.studentId != nil {
-                        //         didRegister = true
-                        //     }
-                        // }
-                        didRegister = true
+                        Task {
+                            await viewModel.register(fullName: fullName, studentNumber: studentId, academicYear: academicYear)
+                            if viewModel.studentId != nil {
+                                didRegister = true
+                            }
+                        }
                     } label: {
                         HStack {
                             if viewModel.isSubmitting {

@@ -6,11 +6,13 @@
 import Foundation
 
 struct StudentRegisterRequest: Encodable {
-    let name: String
+    let fullName: String
+    let studentNumber: String
     let academicYear: Int
 
     enum CodingKeys: String, CodingKey {
-        case name
+        case fullName = "full_name"
+        case studentNumber = "student_number"
         case academicYear = "academic_year"
     }
 }
@@ -59,14 +61,14 @@ final class APIClient {
         self.session = session
     }
 
-    func registerStudent(name: String, academicYear: Int) async throws -> StudentRegisterResponse {
+    func registerStudent(fullName: String, studentNumber: String, academicYear: Int) async throws -> StudentRegisterResponse {
         let url = APIConfig.baseURL.appendingPathComponent("students/register")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(
-            StudentRegisterRequest(name: name, academicYear: academicYear)
+            StudentRegisterRequest(fullName: fullName, studentNumber: studentNumber, academicYear: academicYear)
         )
 
         let (data, response): (Data, URLResponse)
