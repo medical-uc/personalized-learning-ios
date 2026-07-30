@@ -8,6 +8,8 @@ import SwiftUI
 struct QuizView: View {
     var onBack: () -> Void = {}
 
+    @State private var confidenceSelection: ConfidenceLevel?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -15,8 +17,11 @@ struct QuizView: View {
 
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 20) {
-                        QuestionCardView(question: QuizData.sampleQuestion)
-                            .frame(minWidth: 400, maxWidth: .infinity)
+                        VStack(alignment: .leading, spacing: 20) {
+                            QuestionCardView(question: QuizData.sampleQuestion)
+                            ConfidenceSelectorView(selection: $confidenceSelection)
+                        }
+                        .frame(minWidth: 400, maxWidth: .infinity)
 
                         QuizSidePanelView()
                             .frame(width: 320)
@@ -24,6 +29,7 @@ struct QuizView: View {
 
                     VStack(alignment: .leading, spacing: 20) {
                         QuestionCardView(question: QuizData.sampleQuestion)
+                        ConfidenceSelectorView(selection: $confidenceSelection)
                         QuizSidePanelView()
                     }
                 }
