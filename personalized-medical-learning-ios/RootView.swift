@@ -33,6 +33,8 @@ struct RootView: View {
                     FlashcardView(onBack: { selection = .dashboard })
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })
+                case .bookmarks:
+                    BookmarkView(onBack: { selection = .dashboard })
                 default:
                     DashboardView()
                 }
