@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct RootView: View {
+    var onLogOut: () -> Void = {}
+
     @State private var selection: SidebarItem = .dashboard
     @State private var isQuizInProgress = false
 
@@ -37,6 +39,8 @@ struct RootView: View {
                     BookmarkView(onBack: { selection = .dashboard })
                 case .history:
                     HistoryView(onBack: { selection = .dashboard })
+                case .settings:
+                    SettingsView(onLogOut: onLogOut)
                 default:
                     DashboardView()
                 }

@@ -8,8 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var isLoggedIn = SessionManager.isValid
+
     var body: some View {
-        LoginView()
+        if isLoggedIn {
+            RootView(onLogOut: { isLoggedIn = false })
+        } else {
+            LoginView(onLogIn: { isLoggedIn = true })
+        }
     }
 }
 

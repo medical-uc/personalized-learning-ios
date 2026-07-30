@@ -20,10 +20,34 @@ struct StudentRegisterRequest: Encodable {
 struct StudentRegisterResponse: Decodable {
     let studentId: String
     let eventId: String
+    let token: String
+    let expiresAt: Date
 
     enum CodingKeys: String, CodingKey {
         case studentId = "student_id"
         case eventId = "event_id"
+        case token
+        case expiresAt = "expires_at"
+    }
+}
+
+struct StudentLoginRequest: Encodable {
+    let studentNumber: String
+
+    enum CodingKeys: String, CodingKey {
+        case studentNumber = "student_number"
+    }
+}
+
+struct SessionResponse: Decodable {
+    let studentId: String
+    let token: String
+    let expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case studentId = "student_id"
+        case token
+        case expiresAt = "expires_at"
     }
 }
 
@@ -56,20 +80,50 @@ final class APIClient {
     static let shared = APIClient()
 
     private let session: URLSession
+    private let decoder: JSONDecoder
 
     init(session: URLSession = .shared) {
         self.session = session
+
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let whole = ISO8601DateFormatter()
+        whole.formatOptions = [.withInternetDateTime]
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let raw = try container.decode(String.self)
+            if let date = fractional.date(from: raw) ?? whole.date(from: raw) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(raw)")
+        }
+        self.decoder = decoder
     }
 
     func registerStudent(fullName: String, studentNumber: String, academicYear: Int) async throws -> StudentRegisterResponse {
-        let url = APIConfig.baseURL.appendingPathComponent("students/register")
+        try await send(
+            path: "students/register",
+            body: StudentRegisterRequest(fullName: fullName, studentNumber: studentNumber, academicYear: academicYear),
+            expectedStatus: 201
+        )
+    }
+
+    func loginStudent(studentNumber: String) async throws -> SessionResponse {
+        try await send(
+            path: "students/login",
+            body: StudentLoginRequest(studentNumber: studentNumber),
+            expectedStatus: 200
+        )
+    }
+
+    func logoutStudent(token: String) async throws {
+        let url = APIConfig.baseURL.appendingPathComponent("students/logout")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(
-            StudentRegisterRequest(fullName: fullName, studentNumber: studentNumber, academicYear: academicYear)
-        )
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response): (Data, URLResponse)
         do {
@@ -82,18 +136,50 @@ final class APIClient {
             throw APIError.decoding
         }
 
-        guard httpResponse.statusCode == 201 else {
-            if let validationError = try? JSONDecoder().decode(APIValidationError.self, from: data),
-               let firstMessage = validationError.detail.first?.msg {
-                throw APIError.server(firstMessage)
-            }
-            throw APIError.server("Registration failed (status \(httpResponse.statusCode)).")
+        guard httpResponse.statusCode == 204 else {
+            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Logout")
+        }
+    }
+
+    private func send<Body: Encodable, Response: Decodable>(
+        path: String,
+        body: Body,
+        expectedStatus: Int
+    ) async throws -> Response {
+        let url = APIConfig.baseURL.appendingPathComponent(path)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.network(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.decoding
+        }
+
+        guard httpResponse.statusCode == expectedStatus else {
+            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Request")
         }
 
         do {
-            return try JSONDecoder().decode(StudentRegisterResponse.self, from: data)
+            return try decoder.decode(Response.self, from: data)
         } catch {
             throw APIError.decoding
         }
+    }
+
+    private func makeServerError(data: Data, statusCode: Int, action: String) throws -> APIError {
+        if let validationError = try? JSONDecoder().decode(APIValidationError.self, from: data),
+           let firstMessage = validationError.detail.first?.msg {
+            return .server(firstMessage)
+        }
+        return .server("\(action) failed (status \(statusCode)).")
     }
 }

@@ -6,9 +6,11 @@
 import SwiftUI
 
 struct LoginView: View {
+    var onLogIn: () -> Void = {}
+
     @State private var studentId: String = ""
-    @State private var didLogIn = false
     @State private var showRegister = false
+    @StateObject private var viewModel = LoginViewModel()
 
     private var isValid: Bool {
         !studentId.trimmingCharacters(in: .whitespaces).isEmpty
@@ -30,14 +32,26 @@ struct LoginView: View {
                             .textFieldStyle(LoginFieldStyle())
                     }
 
+                    if let errorMessage = viewModel.errorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+
                     Spacer(minLength: 12)
 
                     Button {
-                        didLogIn = true
+                        Task {
+                            await viewModel.logIn(studentNumber: studentId)
+                        }
                     } label: {
                         HStack {
-                            Text("Log In").font(.subheadline.weight(.semibold))
-                            Image(systemName: "arrow.right")
+                            if viewModel.isSubmitting {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text("Log In").font(.subheadline.weight(.semibold))
+                                Image(systemName: "arrow.right")
+                            }
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -45,7 +59,7 @@ struct LoginView: View {
                         .background(isValid ? Theme.dark : Theme.dark.opacity(0.35))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .disabled(!isValid)
+                    .disabled(!isValid || viewModel.isSubmitting)
 
                     HStack {
                         Spacer()
@@ -64,11 +78,11 @@ struct LoginView: View {
             .frame(maxWidth: .infinity)
             .background(Theme.bg)
         }
-        .fullScreenCover(isPresented: $didLogIn) {
-            RootView()
+        .onChange(of: viewModel.didLogIn) { _, didLogIn in
+            if didLogIn { onLogIn() }
         }
         .fullScreenCover(isPresented: $showRegister) {
-            RegisterView()
+            RegisterView(onLogIn: onLogIn)
         }
     }
 

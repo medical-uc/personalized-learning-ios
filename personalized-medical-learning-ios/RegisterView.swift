@@ -6,13 +6,14 @@
 import SwiftUI
 
 struct RegisterView: View {
+    var onLogIn: () -> Void = {}
+
     @State private var fullName: String = ""
     @State private var studentId: String = ""
     @State private var academicYear: Int = 1
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = RegisterViewModel()
     @State private var didRegister = false
-    @State private var didFinishOnboarding = false
     @State private var showLogin = false
 
     private let years = Array(1...6)
@@ -96,14 +97,11 @@ struct RegisterView: View {
             .frame(maxWidth: .infinity)
             .background(Theme.bg)
         }
-        .fullScreenCover(isPresented: $didRegister) {
-            OnboardingView(onFinish: { didFinishOnboarding = true })
-                .fullScreenCover(isPresented: $didFinishOnboarding) {
-                    RootView()
-                }
+        .onChange(of: didRegister) { _, isRegistered in
+            if isRegistered { onLogIn() }
         }
         .fullScreenCover(isPresented: $showLogin) {
-            LoginView()
+            LoginView(onLogIn: onLogIn)
         }
     }
 
