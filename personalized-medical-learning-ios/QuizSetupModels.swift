@@ -32,7 +32,7 @@ enum QuizSetupStep: Int, CaseIterable, Identifiable {
         switch self {
         case .topics: return "Choose Topics"
         case .settings: return "Quiz Settings"
-        case .start: return "Start Quiz"
+        case .start: return "Quiz Preview"
         }
     }
 
@@ -40,13 +40,12 @@ enum QuizSetupStep: Int, CaseIterable, Identifiable {
         switch self {
         case .topics: return "Select the topics you want to be tested on."
         case .settings: return "Set the preferences for your quiz."
-        case .start: return "You're all set! Let's begin."
+        case .start: return "Review your quiz before starting."
         }
     }
 }
 
 enum QuestionType: String, CaseIterable, Identifiable {
-    case trueFalse = "True/False"
     case caseBased = "Case Based"
     case imageBased = "Image Based"
 
@@ -54,7 +53,6 @@ enum QuestionType: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .trueFalse: return "checkmark.circle"
         case .caseBased: return "cross.case"
         case .imageBased: return "photo"
         }

@@ -59,11 +59,11 @@ struct QuizSetupView: View {
                 onNext: { currentStep = .start }
             )
         case .start:
-            StartQuizStepView(
-                topicCount: selectedTopicIDs.count,
+            QuizPreviewStepView(
+                topics: allTopics.filter { selectedTopicIDs.contains($0.id) },
                 settings: settings,
-                onBack: { currentStep = .settings },
-                onStart: { onStart(selectedTopicIDs, settings) }
+                onEditTopics: { currentStep = .topics },
+                onBegin: { onStart(selectedTopicIDs, settings) }
             )
         }
     }
@@ -399,57 +399,83 @@ private struct QuizSettingsStepView: View {
     }
 }
 
-private struct StartQuizStepView: View {
-    let topicCount: Int
+private struct QuizPreviewStepView: View {
+    let topics: [QuizTopic]
     let settings: QuizSettings
-    var onBack: () -> Void
-    var onStart: () -> Void
+    var onEditTopics: () -> Void
+    var onBegin: () -> Void
+
+    private var questionRanges: [UUID: ClosedRange<Int>] {
+        QuizPreviewMath.questionRanges(topicIDs: topics.map(\.id), totalQuestions: settings.questionCount)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Start Quiz").font(.title3.bold()).foregroundStyle(Theme.dark)
-            Text("You're all set! Let's begin.")
+            Text("Quiz Preview").font(.title3.bold()).foregroundStyle(Theme.dark)
+            Text("Review your quiz before starting.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Divider()
-
-            VStack(spacing: 10) {
-                SummaryRow(icon: "book.closed", label: "Topics", value: "\(topicCount) selected")
-                SummaryRow(icon: "list.number", label: "Questions", value: "\(settings.questionCount)")
-                SummaryRow(icon: "square.grid.2x2", label: "Question Types", value: "\(settings.selectedQuestionTypes.count) selected")
-                SummaryRow(icon: "timer", label: "Timer", value: settings.isTimerEnabled ? "\(settings.secondsPerQuestion) sec/question" : "Off")
+            HStack(spacing: 0) {
+                PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: "\(topics.count)", label: "Topics")
+                PreviewStatTile(icon: "questionmark.circle.fill", tint: .green, value: "\(settings.questionCount)", label: "Questions")
+                PreviewStatTile(icon: "clock.fill", tint: .blue, value: settings.isTimerEnabled ? "\(settings.secondsPerQuestion) sec" : "Off", label: "Per Question")
             }
+            .padding(.vertical, 4)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
 
             HStack {
-                Button(action: onBack) {
-                    Text("Back")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.dark)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.white)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.12)))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
+                Text("Topics Included").font(.subheadline.bold()).foregroundStyle(Theme.dark)
                 Spacer()
-
-                Button(action: onStart) {
-                    HStack(spacing: 6) {
-                        Text("Start Quiz")
-                        Image(systemName: "chevron.right")
+                Button(action: onEditTopics) {
+                    HStack(spacing: 4) {
+                        Text("Edit")
+                        Image(systemName: "pencil")
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Theme.dark)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.dark)
                 }
                 .buttonStyle(.plain)
             }
+
+            VStack(spacing: 0) {
+                ForEach(Array(topics.enumerated()), id: \.element.id) { index, topic in
+                    TopicPreviewRow(
+                        topic: topic,
+                        range: questionRanges[topic.id] ?? 0...0
+                    )
+                    if index < topics.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .background(Theme.bg)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Button(action: onBegin) {
+                HStack(spacing: 6) {
+                    Text("Begin Quiz")
+                    Image(systemName: "chevron.right")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Theme.dark)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "lightbulb.fill").foregroundStyle(.yellow)
+                Text("Questions are selected based on your mastery level and may include prerequisite concepts.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .background(Theme.bg)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(20)
         .background(Color.white)
@@ -457,24 +483,60 @@ private struct StartQuizStepView: View {
     }
 }
 
-private struct SummaryRow: View {
+private enum QuizPreviewMath {
+    static func questionRanges(topicIDs: [UUID], totalQuestions: Int) -> [UUID: ClosedRange<Int>] {
+        guard !topicIDs.isEmpty else { return [:] }
+        let base = totalQuestions / topicIDs.count
+        let remainder = totalQuestions % topicIDs.count
+
+        var result: [UUID: ClosedRange<Int>] = [:]
+        for (index, id) in topicIDs.enumerated() {
+            let count = index < remainder ? base + 1 : base
+            let lower = max(1, count - 1)
+            let upper = max(lower, count)
+            result[id] = lower...upper
+        }
+        return result
+    }
+}
+
+private struct PreviewStatTile: View {
     let icon: String
-    let label: String
+    let tint: Color
     let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle().fill(tint.opacity(0.15)).frame(width: 44, height: 44)
+                Image(systemName: icon).foregroundStyle(tint)
+            }
+            Text(value).font(.title3.bold()).foregroundStyle(Theme.dark)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct TopicPreviewRow: View {
+    let topic: QuizTopic
+    let range: ClosedRange<Int>
 
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Theme.bg).frame(width: 36, height: 36)
-                Image(systemName: icon).font(.subheadline).foregroundStyle(Theme.dark)
+                Circle().fill(topic.tint.opacity(0.15)).frame(width: 36, height: 36)
+                Image(systemName: topic.icon).font(.subheadline).foregroundStyle(topic.tint)
             }
-            Text(label).font(.subheadline.weight(.medium)).foregroundStyle(Theme.dark)
+            Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
             Spacer()
-            Text(value).font(.subheadline).foregroundStyle(.secondary)
+            Text(range.lowerBound == range.upperBound ? "\(range.lowerBound) questions" : "\(range.lowerBound)–\(range.upperBound) questions")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .padding(14)
-        .background(Theme.bg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(.vertical, 12)
     }
 }
 
