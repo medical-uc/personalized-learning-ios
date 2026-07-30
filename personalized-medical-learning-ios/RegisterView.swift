@@ -7,16 +7,19 @@ import SwiftUI
 
 struct RegisterView: View {
     @State private var fullName: String = ""
+    @State private var studentId: String = ""
     @State private var academicYear: Int = 1
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = RegisterViewModel()
     @State private var didRegister = false
     @State private var didFinishOnboarding = false
+    @State private var showLogin = false
 
     private let years = Array(1...6)
 
     private var isValid: Bool {
         !fullName.trimmingCharacters(in: .whitespaces).isEmpty
+            && !studentId.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -33,6 +36,11 @@ struct RegisterView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         FieldLabel(text: "Full Name")
                         TextField("e.g. Roxane Harley", text: $fullName)
+                            .textFieldStyle(MediQuizFieldStyle())
+
+                        FieldLabel(text: "Student ID")
+                        TextField("e.g. STU-2026-0142", text: $studentId)
+                            .textInputAutocapitalization(.characters)
                             .textFieldStyle(MediQuizFieldStyle())
 
                         FieldLabel(text: "Academic Year")
@@ -75,9 +83,11 @@ struct RegisterView: View {
                     HStack {
                         Spacer()
                         Text("Already have an account?").font(.caption).foregroundStyle(.secondary)
-                        Button("Log In") {}
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.dark)
+                        Button("Log In") {
+                            showLogin = true
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.dark)
                         Spacer()
                     }
                 }
@@ -92,6 +102,9 @@ struct RegisterView: View {
                 .fullScreenCover(isPresented: $didFinishOnboarding) {
                     RootView()
                 }
+        }
+        .fullScreenCover(isPresented: $showLogin) {
+            LoginView()
         }
     }
 
