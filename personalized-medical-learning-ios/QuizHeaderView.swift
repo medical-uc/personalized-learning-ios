@@ -42,16 +42,11 @@ struct QuizHeaderView: View {
             }
 
             Button {} label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "bookmark")
-                    Text("Bookmark")
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.dark)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                Image(systemName: "bookmark")
+                    .foregroundStyle(Theme.dark)
+                    .frame(width: 40, height: 40)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
             Button {} label: {
