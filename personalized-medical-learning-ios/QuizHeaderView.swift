@@ -1,0 +1,53 @@
+//
+//  QuizHeaderView.swift
+//  personalized-medical-learning-ios
+//
+
+import SwiftUI
+
+struct QuizHeaderView: View {
+    var onBack: () -> Void = {}
+
+    var body: some View {
+        HStack {
+            Button(action: onBack) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.left")
+                    Text("Back to Dashboard")
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.dark)
+            }
+
+            Spacer()
+
+            Button {} label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "bookmark")
+                    Text("Bookmark")
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.dark)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {} label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.dark)
+                    .frame(width: 40, height: 40)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.top, 24)
+    }
+}
+
+#Preview {
+    QuizHeaderView()
+        .padding()
+        .background(Theme.bg)
+}
