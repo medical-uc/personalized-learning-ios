@@ -15,23 +15,9 @@ struct QuizView: View {
             VStack(alignment: .leading, spacing: 20) {
                 QuizHeaderView(onBack: onBack)
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 20) {
-                        VStack(alignment: .leading, spacing: 20) {
-                            QuestionCardView(question: QuizData.sampleQuestion)
-                            ConfidenceSelectorView(selection: $confidenceSelection)
-                        }
-                        .frame(minWidth: 400, maxWidth: .infinity)
-
-                        QuizSidePanelView()
-                            .frame(width: 320)
-                    }
-
-                    VStack(alignment: .leading, spacing: 20) {
-                        QuestionCardView(question: QuizData.sampleQuestion)
-                        ConfidenceSelectorView(selection: $confidenceSelection)
-                        QuizSidePanelView()
-                    }
+                VStack(alignment: .leading, spacing: 20) {
+                    QuestionCardView(question: QuizData.sampleQuestion)
+                    ConfidenceSelectorView(selection: $confidenceSelection)
                 }
             }
             .padding(.horizontal, 24)

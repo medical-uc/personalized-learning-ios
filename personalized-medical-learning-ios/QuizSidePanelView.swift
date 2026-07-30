@@ -15,7 +15,20 @@ struct QuizSidePanelView: View {
     }
 }
 
-private struct QuizProgressCard: View {
+struct QuizNavigatorPopoverContent: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                QuizProgressCard()
+                QuestionNavigatorCard()
+            }
+            .padding(20)
+        }
+        .frame(width: 340, height: 480)
+    }
+}
+
+struct QuizProgressCard: View {
     private var progress: Double { Double(3) / Double(QuizData.totalQuestions) }
 
     var body: some View {
@@ -74,7 +87,7 @@ private struct StatPill: View {
     }
 }
 
-private struct QuestionNavigatorCard: View {
+struct QuestionNavigatorCard: View {
     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
