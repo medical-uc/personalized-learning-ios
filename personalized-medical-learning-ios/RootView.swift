@@ -29,6 +29,8 @@ struct RootView: View {
                             onStart: { _, _ in isQuizInProgress = true }
                         )
                     }
+                case .flashcards:
+                    FlashcardView(onBack: { selection = .dashboard })
                 default:
                     DashboardView()
                 }
