@@ -86,7 +86,7 @@ private struct StepBreadcrumbBar: View {
 
                 if step != QuizSetupStep.allCases.last {
                     Rectangle()
-                        .fill(Color.black.opacity(0.12))
+                        .fill(Color.black)
                         .frame(height: 1)
                         .frame(maxWidth: .infinity)
                 }
@@ -109,8 +109,7 @@ private struct BreadcrumbItem: View {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(isActive || isComplete ? Theme.dark : Color.white)
-                        .overlay(Circle().stroke(Theme.dark.opacity(isActive || isComplete ? 0 : 0.2), lineWidth: 1.5))
+                        .fill(isActive ? Theme.dark.opacity(0.6) : (isComplete ? Theme.dark : Color.black.opacity(0.08)))
                         .frame(width: 32, height: 32)
                     if isComplete {
                         Image(systemName: "checkmark")
@@ -119,13 +118,17 @@ private struct BreadcrumbItem: View {
                     } else {
                         Text("\(step.rawValue + 1)")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isActive || isComplete ? .white : Theme.dark)
+                            .foregroundStyle(isActive ? .white : .secondary)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(step.title).font(.headline).foregroundStyle(Theme.dark)
-                    Text(step.subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(step.title)
+                        .font(.headline)
+                        .foregroundStyle(Theme.dark)
+                    Text(step.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
