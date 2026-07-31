@@ -6,21 +6,25 @@
 import SwiftUI
 
 struct QuizSidePanelView: View {
+    @ObservedObject var viewModel: QuizViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            QuizProgressCard()
-            QuestionNavigatorCard()
+            QuizProgressCard(viewModel: viewModel)
+            QuestionNavigatorCard(viewModel: viewModel)
             GetHelpCard()
         }
     }
 }
 
 struct QuizNavigatorPopoverContent: View {
+    @ObservedObject var viewModel: QuizViewModel
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                QuizProgressCard()
-                QuestionNavigatorCard()
+                QuizProgressCard(viewModel: viewModel)
+                QuestionNavigatorCard(viewModel: viewModel)
             }
             .padding(20)
         }
@@ -29,7 +33,11 @@ struct QuizNavigatorPopoverContent: View {
 }
 
 struct QuizProgressCard: View {
-    private var progress: Double { Double(3) / Double(QuizData.totalQuestions) }
+    @ObservedObject var viewModel: QuizViewModel
+
+    private var percentText: String {
+        "\(Int((viewModel.progress * 100).rounded()))%"
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -41,22 +49,23 @@ struct QuizProgressCard: View {
                 Circle()
                     .stroke(Theme.bg, lineWidth: 10)
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: viewModel.progress)
                     .stroke(Theme.dark, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
 
                 VStack(spacing: 2) {
-                    Text("30%").font(.title.bold())
-                    Text("3 of 10 answered").font(.caption2).foregroundStyle(.secondary)
+                    Text(percentText).font(.title.bold())
+                    Text("\(viewModel.totalQuestions - viewModel.unansweredCount) of \(viewModel.totalQuestions) answered")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(width: 140, height: 140)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                StatPill(icon: "checkmark.circle.fill", tint: .green, value: "\(QuizData.correctCount)", label: "Correct")
-                StatPill(icon: "xmark.circle.fill", tint: .red, value: "\(QuizData.incorrectCount)", label: "Incorrect")
-                StatPill(icon: "circle", tint: .secondary, value: "\(QuizData.unansweredCount)", label: "Unanswered")
-                StatPill(icon: "circle", tint: .secondary, value: QuizData.avgTime, label: "Avg. Time")
+                StatPill(icon: "checkmark.circle.fill", tint: .green, value: "\(viewModel.correctCount)", label: "Correct")
+                StatPill(icon: "xmark.circle.fill", tint: .red, value: "\(viewModel.incorrectCount)", label: "Incorrect")
+                StatPill(icon: "circle", tint: .secondary, value: "\(viewModel.unansweredCount)", label: "Unanswered")
             }
         }
         .padding(18)
@@ -88,6 +97,7 @@ private struct StatPill: View {
 }
 
 struct QuestionNavigatorCard: View {
+    @ObservedObject var viewModel: QuizViewModel
     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
@@ -102,8 +112,13 @@ struct QuestionNavigatorCard: View {
             }
 
             LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(Array(QuizData.navigatorStates.enumerated()), id: \.offset) { index, state in
-                    NavigatorCell(number: index + 1, state: state, isCurrent: index == 2)
+                ForEach(Array(viewModel.navigatorStates.enumerated()), id: \.offset) { index, state in
+                    Button {
+                        viewModel.jumpTo(index: index)
+                    } label: {
+                        NavigatorCell(number: index + 1, state: state, isCurrent: index == viewModel.currentIndex)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -188,7 +203,7 @@ private struct GetHelpCard: View {
 
 #Preview {
     ScrollView {
-        QuizSidePanelView()
+        QuizSidePanelView(viewModel: QuizViewModel(topicPath: "cardiology"))
             .padding()
             .frame(width: 340)
     }

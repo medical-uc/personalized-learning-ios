@@ -7,23 +7,32 @@ import SwiftUI
 
 struct QuizSetupView: View {
     var onBack: () -> Void = {}
-    var onStart: (Set<UUID>, QuizSettings) -> Void = { _, _ in }
+    var onStart: (QuizTopic, QuizSettings) -> Void = { _, _ in }
 
+    @StateObject private var viewModel = QuizSetupViewModel()
     @State private var currentStep: QuizSetupStep = .topics
-    @State private var selectedTopicIDs: Set<UUID> = Set(
-        QuizSetupData.topics.filter { QuizSetupData.recommendedTopicNames.contains($0.name) }.map(\.id)
-    )
-    @State private var customTopics: [QuizTopic] = []
+    @State private var selectedTopicID: String?
     @State private var settings = QuizSettings()
 
-    private var allTopics: [QuizTopic] {
-        QuizSetupData.topics + customTopics
+    private var selectedTopic: QuizTopic? {
+        viewModel.topics.first { $0.id == selectedTopicID }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                QuizHeaderView(onBack: onBack)
+                HStack {
+                    Button(action: onBack) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.left")
+                            Text("Back to Dashboard")
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.dark)
+                    }
+                    Spacer()
+                }
+                .padding(.top, 24)
 
                 StepBreadcrumbBar(currentStep: currentStep) { step in
                     guard step.rawValue < currentStep.rawValue else { return }
@@ -36,6 +45,9 @@ struct QuizSetupView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .task {
+            await viewModel.loadTopics()
+        }
     }
 
     @ViewBuilder
@@ -43,13 +55,11 @@ struct QuizSetupView: View {
         switch step {
         case .topics:
             ChooseTopicsStepView(
-                topics: allTopics,
-                selectedTopicIDs: $selectedTopicIDs,
-                onAddCustomTopic: { name in
-                    let topic = QuizTopic(name: name, icon: "star.fill", tint: Theme.dark, mastery: 0, isCustom: true)
-                    customTopics.append(topic)
-                    selectedTopicIDs.insert(topic.id)
-                },
+                topics: viewModel.topics,
+                isLoading: viewModel.isLoading,
+                errorMessage: viewModel.errorMessage,
+                selectedTopicID: $selectedTopicID,
+                onRetry: { Task { await viewModel.loadTopics() } },
                 onNext: { currentStep = .settings }
             )
         case .settings:
@@ -59,12 +69,14 @@ struct QuizSetupView: View {
                 onNext: { currentStep = .start }
             )
         case .start:
-            QuizPreviewStepView(
-                topics: allTopics.filter { selectedTopicIDs.contains($0.id) },
-                settings: settings,
-                onEditTopics: { currentStep = .topics },
-                onBegin: { onStart(selectedTopicIDs, settings) }
-            )
+            if let selectedTopic {
+                QuizPreviewStepView(
+                    topic: selectedTopic,
+                    settings: settings,
+                    onEditTopics: { currentStep = .topics },
+                    onBegin: { onStart(selectedTopic, settings) }
+                )
+            }
         }
     }
 }
@@ -140,13 +152,13 @@ private struct BreadcrumbItem: View {
 
 private struct ChooseTopicsStepView: View {
     let topics: [QuizTopic]
-    @Binding var selectedTopicIDs: Set<UUID>
-    var onAddCustomTopic: (String) -> Void
+    let isLoading: Bool
+    let errorMessage: String?
+    @Binding var selectedTopicID: String?
+    var onRetry: () -> Void
     var onNext: () -> Void
 
     @State private var searchText = ""
-    @State private var isAddingCustomTopic = false
-    @State private var customTopicName = ""
 
     private var filteredTopics: [QuizTopic] {
         guard !searchText.isEmpty else { return topics }
@@ -155,8 +167,8 @@ private struct ChooseTopicsStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Choose Topics").font(.title3.bold()).foregroundStyle(Theme.dark)
-            Text("Select the topics you want to be tested on.")
+            Text("Choose a Topic").font(.title3.bold()).foregroundStyle(Theme.dark)
+            Text("Select the topic you want to be tested on.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -171,70 +183,40 @@ private struct ChooseTopicsStepView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.06)))
 
-            HStack {
-                Text("Subjects").font(.subheadline.bold())
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "sparkles")
-                    Text("Recommended for you")
+            if isLoading {
+                ProgressView("Loading topics…")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else if let errorMessage {
+                VStack(spacing: 12) {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry", action: onRetry)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Theme.dark)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.dark)
-            }
-
-            VStack(spacing: 10) {
-                ForEach(filteredTopics) { topic in
-                    TopicRow(
-                        topic: topic,
-                        isSelected: selectedTopicIDs.contains(topic.id)
-                    ) {
-                        if selectedTopicIDs.contains(topic.id) {
-                            selectedTopicIDs.remove(topic.id)
-                        } else {
-                            selectedTopicIDs.insert(topic.id)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(filteredTopics) { topic in
+                        TopicRow(
+                            topic: topic,
+                            isSelected: selectedTopicID == topic.id
+                        ) {
+                            selectedTopicID = topic.id
                         }
                     }
                 }
             }
 
-            if isAddingCustomTopic {
-                HStack(spacing: 10) {
-                    TextField("Custom topic name", text: $customTopicName)
-                        .textFieldStyle(.plain)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Theme.bg)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                    Button("Add") {
-                        let trimmed = customTopicName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        onAddCustomTopic(trimmed)
-                        customTopicName = ""
-                        isAddingCustomTopic = false
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Theme.dark)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-
             HStack {
-                Button {
-                    isAddingCustomTopic.toggle()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                        Text("Add Custom Topic")
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.dark)
-                }
-                .buttonStyle(.plain)
-
                 Spacer()
 
                 Button(action: onNext) {
@@ -246,10 +228,10 @@ private struct ChooseTopicsStepView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(selectedTopicIDs.isEmpty ? Theme.dark.opacity(0.4) : Theme.dark)
+                    .background(selectedTopicID == nil ? Theme.dark.opacity(0.4) : Theme.dark)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .disabled(selectedTopicIDs.isEmpty)
+                .disabled(selectedTopicID == nil)
             }
         }
         .padding(20)
@@ -271,24 +253,14 @@ private struct TopicRow: View {
                     Image(systemName: topic.icon).foregroundStyle(topic.tint)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
-                    HStack(spacing: 8) {
-                        ProgressView(value: Double(topic.mastery), total: 100)
-                            .tint(topic.masteryColor)
-                            .frame(width: 140)
-                        Text("\(topic.mastery)% Mastery")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
 
                 Spacer()
 
                 ZStack {
-                    RoundedRectangle(cornerRadius: 6)
+                    Circle()
                         .fill(isSelected ? Theme.dark : Color.white)
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.black.opacity(0.15), lineWidth: isSelected ? 0 : 1.5))
+                        .overlay(Circle().stroke(Color.black.opacity(0.15), lineWidth: isSelected ? 0 : 1.5))
                         .frame(width: 26, height: 26)
                     if isSelected {
                         Image(systemName: "checkmark")
@@ -316,28 +288,6 @@ private struct QuizSettingsStepView: View {
             Text("Set the preferences for your quiz.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-
-            Divider()
-
-            SettingRow(title: "Question Count", subtitle: "How many questions?") {
-                Menu {
-                    ForEach(QuizSetupOptions.questionCounts, id: \.self) { count in
-                        Button("\(count)") { settings.questionCount = count }
-                    }
-                } label: {
-                    PickerLabel(text: "\(settings.questionCount)")
-                }
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 14) {
-                SettingRow(title: "Question Type", subtitle: "Select question format") {
-                    PickerLabel(text: settings.selectedQuestionTypes.count == QuestionType.allCases.count ? "All Types" : "\(settings.selectedQuestionTypes.count) Selected")
-                }
-
-                FlowQuestionTypes(settings: $settings)
-            }
 
             Divider()
 
@@ -403,14 +353,10 @@ private struct QuizSettingsStepView: View {
 }
 
 private struct QuizPreviewStepView: View {
-    let topics: [QuizTopic]
+    let topic: QuizTopic
     let settings: QuizSettings
     var onEditTopics: () -> Void
     var onBegin: () -> Void
-
-    private var questionRanges: [UUID: ClosedRange<Int>] {
-        QuizPreviewMath.questionRanges(topicIDs: topics.map(\.id), totalQuestions: settings.questionCount)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -420,15 +366,14 @@ private struct QuizPreviewStepView: View {
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 0) {
-                PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: "\(topics.count)", label: "Topics")
-                PreviewStatTile(icon: "questionmark.circle.fill", tint: .green, value: "\(settings.questionCount)", label: "Questions")
+                PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: topic.name, label: "Topic")
                 PreviewStatTile(icon: "clock.fill", tint: .blue, value: settings.isTimerEnabled ? "\(settings.secondsPerQuestion) sec" : "Off", label: "Per Question")
             }
             .padding(.vertical, 4)
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
 
             HStack {
-                Text("Topics Included").font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                Text("Topic").font(.subheadline.bold()).foregroundStyle(Theme.dark)
                 Spacer()
                 Button(action: onEditTopics) {
                     HStack(spacing: 4) {
@@ -441,18 +386,16 @@ private struct QuizPreviewStepView: View {
                 .buttonStyle(.plain)
             }
 
-            VStack(spacing: 0) {
-                ForEach(Array(topics.enumerated()), id: \.element.id) { index, topic in
-                    TopicPreviewRow(
-                        topic: topic,
-                        range: questionRanges[topic.id] ?? 0...0
-                    )
-                    if index < topics.count - 1 {
-                        Divider()
-                    }
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(topic.tint.opacity(0.15)).frame(width: 36, height: 36)
+                    Image(systemName: topic.icon).font(.subheadline).foregroundStyle(topic.tint)
                 }
+                Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                Spacer()
             }
             .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 14))
 
@@ -469,37 +412,10 @@ private struct QuizPreviewStepView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "lightbulb.fill").foregroundStyle(.yellow)
-                Text("Questions are selected based on your mastery level and may include prerequisite concepts.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(14)
-            .background(Theme.bg)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(20)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-}
-
-private enum QuizPreviewMath {
-    static func questionRanges(topicIDs: [UUID], totalQuestions: Int) -> [UUID: ClosedRange<Int>] {
-        guard !topicIDs.isEmpty else { return [:] }
-        let base = totalQuestions / topicIDs.count
-        let remainder = totalQuestions % topicIDs.count
-
-        var result: [UUID: ClosedRange<Int>] = [:]
-        for (index, id) in topicIDs.enumerated() {
-            let count = index < remainder ? base + 1 : base
-            let lower = max(1, count - 1)
-            let upper = max(lower, count)
-            result[id] = lower...upper
-        }
-        return result
     }
 }
 
@@ -519,26 +435,6 @@ private struct PreviewStatTile: View {
             Text(label).font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-    }
-}
-
-private struct TopicPreviewRow: View {
-    let topic: QuizTopic
-    let range: ClosedRange<Int>
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(topic.tint.opacity(0.15)).frame(width: 36, height: 36)
-                Image(systemName: topic.icon).font(.subheadline).foregroundStyle(topic.tint)
-            }
-            Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
-            Spacer()
-            Text(range.lowerBound == range.upperBound ? "\(range.lowerBound) questions" : "\(range.lowerBound)–\(range.upperBound) questions")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
         .padding(.vertical, 12)
     }
 }
@@ -571,39 +467,6 @@ private struct PickerLabel: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.12)))
-    }
-}
-
-private struct FlowQuestionTypes: View {
-    @Binding var settings: QuizSettings
-    let columns = [GridItem(.adaptive(minimum: 130), spacing: 10)]
-
-    var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
-            ForEach(QuestionType.allCases) { type in
-                let isSelected = settings.selectedQuestionTypes.contains(type)
-                Button {
-                    if isSelected {
-                        settings.selectedQuestionTypes.remove(type)
-                    } else {
-                        settings.selectedQuestionTypes.insert(type)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: type.icon)
-                        Text(type.rawValue)
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(isSelected ? .white : Theme.dark)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
-                    .background(isSelected ? Theme.dark : Theme.bg)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 }
 

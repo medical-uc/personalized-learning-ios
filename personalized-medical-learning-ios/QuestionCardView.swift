@@ -7,6 +7,10 @@ import SwiftUI
 
 struct QuestionCardView: View {
     let question: QuizQuestion
+    var totalQuestions: Int = 1
+    var onSelectOption: (Int) -> Void = { _ in }
+    var onPrevious: () -> Void = {}
+    var onNext: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -14,7 +18,7 @@ struct QuestionCardView: View {
             promptText
             optionsList
 
-            if question.selectedLetter != nil {
+            if question.selectedIndex != nil {
                 ExplanationCard(question: question)
             }
 
@@ -28,7 +32,7 @@ struct QuestionCardView: View {
     private var questionHeader: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Question \(question.index)/\(QuizData.totalQuestions)")
+                Text("Question \(question.index)/\(totalQuestions)")
                     .font(.headline)
 
                 HStack(spacing: 8) {
@@ -69,14 +73,16 @@ struct QuestionCardView: View {
     private var optionsList: some View {
         VStack(spacing: 12) {
             ForEach(question.options) { option in
-                OptionRow(option: option, question: question)
+                OptionRow(option: option, question: question) {
+                    onSelectOption(option.id)
+                }
             }
         }
     }
 
     private var footer: some View {
         HStack {
-            Button {} label: {
+            Button(action: onPrevious) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.left")
                     Text("Previous")
@@ -88,19 +94,12 @@ struct QuestionCardView: View {
                 .background(Theme.bg)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(question.index <= 1)
+            .opacity(question.index <= 1 ? 0.4 : 1)
 
             Spacer()
 
-            HStack(spacing: 6) {
-                Image(systemName: "clock")
-                Text(QuizData.avgTime)
-            }
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(.red)
-
-            Spacer()
-
-            Button {} label: {
+            Button(action: onNext) {
                 HStack(spacing: 6) {
                     Text("Next")
                     Image(systemName: "arrow.right")
@@ -112,6 +111,8 @@ struct QuestionCardView: View {
                 .background(Theme.dark)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(question.index >= totalQuestions)
+            .opacity(question.index >= totalQuestions ? 0.4 : 1)
         }
     }
 }
@@ -119,10 +120,11 @@ struct QuestionCardView: View {
 private struct OptionRow: View {
     let option: QuizOption
     let question: QuizQuestion
+    let onTap: () -> Void
 
-    private var isSelected: Bool { option.letter == question.selectedLetter }
-    private var isCorrect: Bool { option.letter == question.correctLetter }
-    private var showResult: Bool { question.selectedLetter != nil }
+    private var isSelected: Bool { option.id == question.selectedIndex }
+    private var isCorrect: Bool { option.id == question.correctIndex }
+    private var showResult: Bool { question.selectedIndex != nil }
 
     private var borderColor: Color {
         guard showResult else { return Color.black.opacity(0.06) }
@@ -139,35 +141,40 @@ private struct OptionRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(showResult && isCorrect ? Color.green : Theme.dark)
-                    .frame(width: 32, height: 32)
-                Text(option.letter)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(showResult && isCorrect ? Color.green : Theme.dark)
+                        .frame(width: 32, height: 32)
+                    Text(option.letter)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+
+                Text(option.text)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.dark)
+
+                Spacer()
+
+                if showResult && isCorrect {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                } else if showResult && isSelected {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+                } else {
+                    Circle()
+                        .stroke(Color.black.opacity(0.15), lineWidth: 1.5)
+                        .frame(width: 22, height: 22)
+                }
             }
-
-            Text(option.text)
-                .font(.subheadline.weight(.medium))
-
-            Spacer()
-
-            if showResult && isCorrect {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-            } else if showResult && isSelected {
-                Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
-            } else {
-                Circle()
-                    .stroke(Color.black.opacity(0.15), lineWidth: 1.5)
-                    .frame(width: 22, height: 22)
-            }
+            .padding(16)
+            .background(backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(borderColor, lineWidth: 1.5))
         }
-        .padding(16)
-        .background(backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(borderColor, lineWidth: 1.5))
+        .buttonStyle(.plain)
+        .disabled(showResult)
     }
 }
 

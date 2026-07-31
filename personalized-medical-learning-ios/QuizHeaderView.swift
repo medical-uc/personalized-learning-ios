@@ -7,6 +7,7 @@ import SwiftUI
 
 struct QuizHeaderView: View {
     var onBack: () -> Void = {}
+    @ObservedObject var viewModel: QuizViewModel
 
     @State private var isNavigatorPresented = false
 
@@ -38,11 +39,13 @@ struct QuizHeaderView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .popover(isPresented: $isNavigatorPresented) {
-                QuizNavigatorPopoverContent()
+                QuizNavigatorPopoverContent(viewModel: viewModel)
             }
 
-            Button {} label: {
-                Image(systemName: "bookmark")
+            Button {
+                viewModel.toggleBookmark()
+            } label: {
+                Image(systemName: viewModel.currentQuestion?.isBookmarked == true ? "bookmark.fill" : "bookmark")
                     .foregroundStyle(Theme.dark)
                     .frame(width: 40, height: 40)
                     .background(Color.white)
@@ -62,7 +65,7 @@ struct QuizHeaderView: View {
 }
 
 #Preview {
-    QuizHeaderView()
+    QuizHeaderView(viewModel: QuizViewModel(topicPath: "cardiology"))
         .padding()
         .background(Theme.bg)
 }

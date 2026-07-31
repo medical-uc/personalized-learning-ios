@@ -58,6 +58,47 @@ struct APIValidationError: Decodable {
     let detail: [Detail]
 }
 
+struct TopicListResponse: Decodable {
+    let topics: [String]
+}
+
+struct OptionOut: Decodable {
+    let index: Int
+    let text: String
+}
+
+struct QuestionOut: Decodable {
+    let uid: String
+    let stem: String
+    let options: [OptionOut]
+    let topicTag: [String]
+    let difficulty: Int
+
+    enum CodingKeys: String, CodingKey {
+        case uid, stem, options
+        case topicTag = "topic_tag"
+        case difficulty
+    }
+}
+
+struct AnswerSubmitRequest: Encodable {
+    let selectedIndex: Int
+
+    enum CodingKeys: String, CodingKey {
+        case selectedIndex = "selected_index"
+    }
+}
+
+struct AnswerSubmitResponse: Decodable {
+    let correct: Bool
+    let correctIndex: Int
+
+    enum CodingKeys: String, CodingKey {
+        case correct
+        case correctIndex = "correct_index"
+    }
+}
+
 enum APIError: LocalizedError {
     case server(String)
     case decoding
@@ -141,16 +182,66 @@ final class APIClient {
         }
     }
 
+    func listTopics() async throws -> [String] {
+        let response: TopicListResponse = try await get(path: "quiz/topics")
+        return response.topics
+    }
+
+    func getQuestions(topicPath: String) async throws -> [QuestionOut] {
+        try await get(path: "quiz/topics/\(topicPath)/questions")
+    }
+
+    func submitAnswer(uid: String, selectedIndex: Int) async throws -> AnswerSubmitResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to submit an answer.")
+        }
+        return try await send(
+            path: "quiz/questions/\(uid)/answer",
+            body: AnswerSubmitRequest(selectedIndex: selectedIndex),
+            expectedStatus: 200,
+            token: token
+        )
+    }
+
+    private func get<Response: Decodable>(path: String) async throws -> Response {
+        let url = APIConfig.baseURL.appendingPathComponent(path)
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch {
+            throw APIError.network(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.decoding
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Request")
+        }
+
+        do {
+            return try decoder.decode(Response.self, from: data)
+        } catch {
+            throw APIError.decoding
+        }
+    }
+
     private func send<Body: Encodable, Response: Decodable>(
         path: String,
         body: Body,
-        expectedStatus: Int
+        expectedStatus: Int,
+        token: String? = nil
     ) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response): (Data, URLResponse)

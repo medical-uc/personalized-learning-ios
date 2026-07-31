@@ -9,7 +9,7 @@ struct RootView: View {
     var onLogOut: () -> Void = {}
 
     @State private var selection: SidebarItem = .dashboard
-    @State private var isQuizInProgress = false
+    @State private var activeTopicPath: String?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -20,15 +20,15 @@ struct RootView: View {
                 case .dashboard:
                     DashboardView()
                 case .quiz:
-                    if isQuizInProgress {
-                        QuizView(onBack: {
-                            isQuizInProgress = false
+                    if let activeTopicPath {
+                        QuizView(topicPath: activeTopicPath, onBack: {
+                            self.activeTopicPath = nil
                             selection = .dashboard
                         })
                     } else {
                         QuizSetupView(
                             onBack: { selection = .dashboard },
-                            onStart: { _, _ in isQuizInProgress = true }
+                            onStart: { topic, _ in activeTopicPath = topic.path }
                         )
                     }
                 case .flashcards:
