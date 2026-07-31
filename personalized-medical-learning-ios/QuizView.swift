@@ -45,6 +45,7 @@ struct QuizView: View {
                         question: question,
                         totalQuestions: viewModel.totalQuestions,
                         isNextEnabled: confidenceSelection != nil,
+                        confidenceSelection: $confidenceSelection,
                         onSelectOption: { viewModel.selectOption($0, confidence: confidenceSelection) },
                         onPrevious: { viewModel.goToPrevious() },
                         onNext: {
@@ -65,14 +66,6 @@ struct QuizView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
-        .safeAreaInset(edge: .bottom) {
-            if viewModel.currentQuestion != nil {
-                ConfidenceSelectorView(selection: $confidenceSelection)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 12)
-                    .background(Theme.bg)
-            }
-        }
         .task {
             await viewModel.loadQuestions()
             viewModel.onQuestionAppear()
