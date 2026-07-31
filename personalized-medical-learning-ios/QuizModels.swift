@@ -36,7 +36,6 @@ struct QuizQuestion: Identifiable {
     let index: Int
     let subject: String
     let difficulty: Difficulty
-    let xp: Int
     let prompt: String
     let options: [QuizOption]
     var correctIndex: Int?
@@ -69,7 +68,6 @@ extension QuizQuestion {
         self.index = index
         self.subject = questionOut.topicTag.first ?? "General"
         self.difficulty = Difficulty(serverLevel: questionOut.difficulty)
-        self.xp = questionOut.difficulty * 5 + 5
         self.prompt = questionOut.stem
         self.options = questionOut.options.map { option in
             QuizOption(
@@ -109,7 +107,6 @@ enum QuizData {
         index: 3,
         subject: "Pharmacology",
         difficulty: .medium,
-        xp: 10,
         prompt: "Which of the following mechanisms is the primary reason for the therapeutic effect of beta-blockers in patients with hypertension?",
         options: [
             .init(id: 0, letter: "A", text: "Decreased heart rate and cardiac output"),

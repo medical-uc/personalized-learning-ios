@@ -54,14 +54,6 @@ struct QuestionCardView: View {
             }
 
             Spacer()
-
-            Text("+\(question.xp) XP")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.dark)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Theme.bg)
-                .clipShape(Capsule())
         }
     }
 

@@ -24,6 +24,12 @@ struct QuizHeaderView: View {
 
             Spacer()
 
+            if !viewModel.questions.isEmpty {
+                Text(viewModel.elapsedTimeText)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.dark)
+            }
+
             Button {
                 isNavigatorPresented = true
             } label: {

@@ -12,14 +12,43 @@ final class QuizViewModel: ObservableObject {
     @Published private(set) var currentIndex = 0
     @Published private(set) var isLoading = false
     @Published private(set) var isSubmitting = false
+    @Published private(set) var elapsedSeconds = 0
     @Published var errorMessage: String?
 
     let topicPath: String
     private let client: APIClient
+    private var timerCancellable: AnyCancellable?
+    private var questionShownAt: Date?
+    private var answerTimeTaken: [String: Double] = [:]
 
     init(topicPath: String, client: APIClient = .shared) {
         self.topicPath = topicPath
         self.client = client
+    }
+
+    var elapsedTimeText: String {
+        let minutes = elapsedSeconds / 60
+        let seconds = elapsedSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func startTimer() {
+        guard timerCancellable == nil else { return }
+        elapsedSeconds = 0
+        timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.elapsedSeconds += 1
+            }
+    }
+
+    func stopTimer() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+    }
+
+    func onQuestionAppear() {
+        questionShownAt = Date()
     }
 
     var currentQuestion: QuizQuestion? {
@@ -50,6 +79,7 @@ final class QuizViewModel: ObservableObject {
                 QuizQuestion(index: index + 1, questionOut: question)
             }
             currentIndex = 0
+            startTimer()
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
@@ -60,6 +90,8 @@ final class QuizViewModel: ObservableObject {
         question.selectedIndex = optionIndex
         questions[currentIndex] = question
         let questionID = question.id
+
+        answerTimeTaken[questionID] = Date().timeIntervalSince(questionShownAt ?? Date())
 
         Task {
             await checkAnswer(optionIndex: optionIndex, questionID: questionID)
@@ -93,10 +125,18 @@ final class QuizViewModel: ObservableObject {
         isSubmitting = true
         defer { isSubmitting = false }
 
+        let timeTaken = answerTimeTaken[questionID] ?? 0
+
         do {
-            _ = try await client.logAttempt(uid: questionID, selectedIndex: optionIndex, confidence: confidence.apiValue)
+            _ = try await client.logAttempt(
+                uid: questionID,
+                selectedIndex: optionIndex,
+                confidence: confidence.apiValue,
+                timeTakenSeconds: timeTaken
+            )
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].isLogged = true
+            answerTimeTaken.removeValue(forKey: questionID)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }

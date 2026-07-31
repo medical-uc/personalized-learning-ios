@@ -56,14 +56,19 @@ struct QuizView: View {
         }
         .task {
             await viewModel.loadQuestions()
+            viewModel.onQuestionAppear()
         }
         .onChange(of: viewModel.currentIndex) {
             confidenceSelection = nil
+            viewModel.onQuestionAppear()
         }
         .onChange(of: confidenceSelection) {
             if let confidenceSelection {
                 viewModel.confirmConfidence(confidenceSelection)
             }
+        }
+        .onDisappear {
+            viewModel.stopTimer()
         }
     }
 }
