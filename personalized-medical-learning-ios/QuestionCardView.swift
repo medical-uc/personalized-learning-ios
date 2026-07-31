@@ -13,6 +13,8 @@ struct QuestionCardView: View {
     var onPrevious: () -> Void = {}
     var onNext: () -> Void = {}
 
+    private var isLastQuestion: Bool { question.index >= totalQuestions }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             questionHeader
@@ -94,8 +96,8 @@ struct QuestionCardView: View {
 
             Button(action: onNext) {
                 HStack(spacing: 6) {
-                    Text("Next")
-                    Image(systemName: "arrow.right")
+                    Text(isLastQuestion ? "Finish" : "Next")
+                    Image(systemName: isLastQuestion ? "checkmark" : "arrow.right")
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
@@ -104,8 +106,8 @@ struct QuestionCardView: View {
                 .background(Theme.dark)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(question.index >= totalQuestions || !isNextEnabled)
-            .opacity(question.index >= totalQuestions || !isNextEnabled ? 0.4 : 1)
+            .disabled(!isNextEnabled)
+            .opacity(isNextEnabled ? 1 : 0.4)
         }
     }
 }

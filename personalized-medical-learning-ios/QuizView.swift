@@ -11,6 +11,7 @@ struct QuizView: View {
 
     @StateObject private var viewModel: QuizViewModel
     @State private var confidenceSelection: ConfidenceLevel?
+    @State private var resultSummary: QuizResultSummary?
 
     init(topicPath: String, onBack: @escaping () -> Void = {}) {
         self.topicPath = topicPath
@@ -19,6 +20,14 @@ struct QuizView: View {
     }
 
     var body: some View {
+        if let resultSummary {
+            QuizResultView(summary: resultSummary, onBack: onBack)
+        } else {
+            quizBody
+        }
+    }
+
+    private var quizBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 QuizHeaderView(onBack: onBack, viewModel: viewModel)
@@ -38,7 +47,14 @@ struct QuizView: View {
                         isNextEnabled: confidenceSelection != nil,
                         onSelectOption: { viewModel.selectOption($0, confidence: confidenceSelection) },
                         onPrevious: { viewModel.goToPrevious() },
-                        onNext: { viewModel.goToNext() }
+                        onNext: {
+                            if viewModel.isLastQuestion {
+                                viewModel.stopTimer()
+                                resultSummary = viewModel.resultSummary
+                            } else {
+                                viewModel.goToNext()
+                            }
+                        }
                     )
                 }
             }

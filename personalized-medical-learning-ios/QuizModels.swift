@@ -101,6 +101,26 @@ extension Difficulty {
     }
 }
 
+struct QuizResultSummary {
+    let topicPath: String
+    let totalQuestions: Int
+    let correctCount: Int
+    let incorrectCount: Int
+    let unansweredCount: Int
+    let elapsedSeconds: Int
+
+    var scorePercent: Int {
+        guard totalQuestions > 0 else { return 0 }
+        return Int((Double(correctCount) / Double(totalQuestions) * 100).rounded())
+    }
+
+    var elapsedTimeText: String {
+        let minutes = elapsedSeconds / 60
+        let seconds = elapsedSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
 enum QuizData {
     static let sampleQuestion = QuizQuestion(
         id: "sample",

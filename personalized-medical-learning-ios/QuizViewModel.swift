@@ -56,6 +56,7 @@ final class QuizViewModel: ObservableObject {
     }
 
     var totalQuestions: Int { questions.count }
+    var isLastQuestion: Bool { currentIndex + 1 >= questions.count }
 
     var correctCount: Int { questions.filter { $0.state == .correct }.count }
     var incorrectCount: Int { questions.filter { $0.state == .incorrect }.count }
@@ -155,6 +156,17 @@ final class QuizViewModel: ObservableObject {
     func jumpTo(index: Int) {
         guard questions.indices.contains(index) else { return }
         currentIndex = index
+    }
+
+    var resultSummary: QuizResultSummary {
+        QuizResultSummary(
+            topicPath: topicPath,
+            totalQuestions: totalQuestions,
+            correctCount: correctCount,
+            incorrectCount: incorrectCount,
+            unansweredCount: unansweredCount,
+            elapsedSeconds: elapsedSeconds
+        )
     }
 
     func toggleBookmark() {
