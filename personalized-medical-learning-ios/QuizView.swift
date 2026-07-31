@@ -36,7 +36,7 @@ struct QuizView: View {
                         question: question,
                         totalQuestions: viewModel.totalQuestions,
                         isNextEnabled: confidenceSelection != nil,
-                        onSelectOption: { viewModel.selectOption($0) },
+                        onSelectOption: { viewModel.selectOption($0, confidence: confidenceSelection) },
                         onPrevious: { viewModel.goToPrevious() },
                         onNext: { viewModel.goToNext() }
                     )
@@ -59,6 +59,11 @@ struct QuizView: View {
         }
         .onChange(of: viewModel.currentIndex) {
             confidenceSelection = nil
+        }
+        .onChange(of: confidenceSelection) {
+            if let confidenceSelection {
+                viewModel.confirmConfidence(confidenceSelection)
+            }
         }
     }
 }

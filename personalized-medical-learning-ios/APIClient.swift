@@ -81,7 +81,7 @@ struct QuestionOut: Decodable {
     }
 }
 
-struct AnswerSubmitRequest: Encodable {
+struct CheckAnswerRequest: Encodable {
     let selectedIndex: Int
 
     enum CodingKeys: String, CodingKey {
@@ -89,13 +89,33 @@ struct AnswerSubmitRequest: Encodable {
     }
 }
 
-struct AnswerSubmitResponse: Decodable {
+struct CheckAnswerResponse: Decodable {
     let correct: Bool
     let correctIndex: Int
 
     enum CodingKeys: String, CodingKey {
         case correct
         case correctIndex = "correct_index"
+    }
+}
+
+struct LogAttemptRequest: Encodable {
+    let selectedIndex: Int
+    let confidence: String
+
+    enum CodingKeys: String, CodingKey {
+        case selectedIndex = "selected_index"
+        case confidence
+    }
+}
+
+struct LogAttemptResponse: Decodable {
+    let eventId: String
+    let correct: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
+        case correct
     }
 }
 
@@ -191,13 +211,21 @@ final class APIClient {
         try await get(path: "quiz/topics/\(topicPath)/questions")
     }
 
-    func submitAnswer(uid: String, selectedIndex: Int) async throws -> AnswerSubmitResponse {
+    func checkAnswer(uid: String, selectedIndex: Int) async throws -> CheckAnswerResponse {
+        try await send(
+            path: "quiz/questions/\(uid)/check",
+            body: CheckAnswerRequest(selectedIndex: selectedIndex),
+            expectedStatus: 200
+        )
+    }
+
+    func logAttempt(uid: String, selectedIndex: Int, confidence: String) async throws -> LogAttemptResponse {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to submit an answer.")
         }
         return try await send(
-            path: "quiz/questions/\(uid)/answer",
-            body: AnswerSubmitRequest(selectedIndex: selectedIndex),
+            path: "quiz/questions/\(uid)/log",
+            body: LogAttemptRequest(selectedIndex: selectedIndex, confidence: confidence),
             expectedStatus: 200,
             token: token
         )

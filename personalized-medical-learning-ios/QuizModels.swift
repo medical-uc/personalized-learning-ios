@@ -41,6 +41,7 @@ struct QuizQuestion: Identifiable {
     let options: [QuizOption]
     var correctIndex: Int?
     var selectedIndex: Int?
+    var isLogged = false
     let explanationTitle: String
     var explanationBody: String
     let reference: String

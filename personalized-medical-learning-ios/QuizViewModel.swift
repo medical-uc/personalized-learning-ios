@@ -55,27 +55,49 @@ final class QuizViewModel: ObservableObject {
         }
     }
 
-    func selectOption(_ optionIndex: Int) {
+    func selectOption(_ optionIndex: Int, confidence: ConfidenceLevel?) {
         guard var question = currentQuestion, question.selectedIndex == nil else { return }
         question.selectedIndex = optionIndex
         questions[currentIndex] = question
+        let questionID = question.id
 
         Task {
-            await submitAnswer(optionIndex: optionIndex, questionID: question.id)
+            await checkAnswer(optionIndex: optionIndex, questionID: questionID)
+            if let confidence {
+                await logAttempt(optionIndex: optionIndex, questionID: questionID, confidence: confidence)
+            }
         }
     }
 
-    private func submitAnswer(optionIndex: Int, questionID: String) async {
-        isSubmitting = true
-        defer { isSubmitting = false }
+    func confirmConfidence(_ confidence: ConfidenceLevel) {
+        guard let question = currentQuestion, let selectedIndex = question.selectedIndex, !question.isLogged else { return }
+        Task {
+            await logAttempt(optionIndex: selectedIndex, questionID: question.id, confidence: confidence)
+        }
+    }
 
+    private func checkAnswer(optionIndex: Int, questionID: String) async {
         do {
-            let result = try await client.submitAnswer(uid: questionID, selectedIndex: optionIndex)
+            let result = try await client.checkAnswer(uid: questionID, selectedIndex: optionIndex)
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].correctIndex = result.correctIndex
         } catch {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].selectedIndex = nil
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    private func logAttempt(optionIndex: Int, questionID: String, confidence: ConfidenceLevel) async {
+        guard let index = questions.firstIndex(where: { $0.id == questionID }), !questions[index].isLogged else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            _ = try await client.logAttempt(uid: questionID, selectedIndex: optionIndex, confidence: confidence.apiValue)
+            guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
+            questions[index].isLogged = true
+        } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
     }

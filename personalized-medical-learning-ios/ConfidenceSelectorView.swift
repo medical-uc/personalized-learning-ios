@@ -12,6 +12,14 @@ enum ConfidenceLevel: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var apiValue: String {
+        switch self {
+        case .guessing: return "guessing"
+        case .unsure: return "unsure"
+        case .confident: return "confident"
+        }
+    }
+
     var icon: String {
         switch self {
         case .guessing: return "questionmark.circle"
