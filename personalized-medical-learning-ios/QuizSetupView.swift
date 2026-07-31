@@ -21,16 +21,13 @@ struct QuizSetupView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    Button(action: onBack) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.left")
-                            Text("Back to Dashboard")
-                        }
-                        .font(.subheadline.weight(.medium))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Create a Quiz")
+                        .font(.largeTitle.bold())
                         .foregroundStyle(Theme.dark)
-                    }
-                    Spacer()
+                    Text("Customize your quiz to focus on what matters most to you.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.top, 24)
 
