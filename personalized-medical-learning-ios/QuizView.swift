@@ -8,14 +8,17 @@ import SwiftUI
 struct QuizView: View {
     var topicPath: String
     var onBack: () -> Void = {}
+    var onProgressChange: (Bool) -> Void = { _ in }
 
     @StateObject private var viewModel: QuizViewModel
     @State private var confidenceSelection: ConfidenceLevel?
     @State private var resultSummary: QuizResultSummary?
+    @State private var showExitConfirm = false
 
-    init(topicPath: String, onBack: @escaping () -> Void = {}) {
+    init(topicPath: String, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
         self.topicPath = topicPath
         self.onBack = onBack
+        self.onProgressChange = onProgressChange
         _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath))
     }
 
@@ -27,10 +30,19 @@ struct QuizView: View {
         }
     }
 
+    private func requestExit() {
+        showExitConfirm = true
+    }
+
+    private func confirmExit() {
+        onProgressChange(false)
+        onBack()
+    }
+
     private var quizBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                QuizHeaderView(onBack: onBack, viewModel: viewModel)
+                QuizHeaderView(onBack: requestExit, viewModel: viewModel)
 
                 if viewModel.isLoading {
                     ProgressView("Loading questions…")
@@ -53,6 +65,7 @@ struct QuizView: View {
                                 let summary = viewModel.resultSummary
                                 Task {
                                     await viewModel.finishQuiz()
+                                    onProgressChange(false)
                                     resultSummary = summary
                                 }
                             } else {
@@ -66,9 +79,21 @@ struct QuizView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .alert(
+            "Leave quiz?",
+            isPresented: $showExitConfirm
+        ) {
+            Button("Leave Quiz", role: .destructive, action: confirmExit)
+            Button("Keep Going", role: .cancel) {}
+        } message: {
+            Text("Your progress on this quiz will be lost if you leave now.")
+        }
         .task {
             await viewModel.loadQuestions()
             viewModel.onQuestionAppear()
+            if viewModel.currentQuestion != nil {
+                onProgressChange(true)
+            }
         }
         .onChange(of: viewModel.currentIndex) {
             confidenceSelection = nil

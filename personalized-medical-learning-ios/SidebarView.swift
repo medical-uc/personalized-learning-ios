@@ -6,7 +6,8 @@
 import SwiftUI
 
 struct SidebarView: View {
-    @Binding var selection: SidebarItem
+    var selection: SidebarItem
+    var onSelect: (SidebarItem) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,7 +25,7 @@ struct SidebarView: View {
             VStack(spacing: 4) {
                 ForEach(SidebarItem.allCases) { item in
                     SidebarRow(item: item, isSelected: item == selection)
-                        .onTapGesture { selection = item }
+                        .onTapGesture { onSelect(item) }
                 }
             }
             .padding(.horizontal, 12)
@@ -108,5 +109,5 @@ private struct ProfileFooter: View {
 }
 
 #Preview {
-    SidebarView(selection: .constant(.dashboard))
+    SidebarView(selection: .dashboard)
 }

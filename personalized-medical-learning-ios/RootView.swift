@@ -10,10 +10,21 @@ struct RootView: View {
 
     @State private var selection: SidebarItem = .dashboard
     @State private var activeTopicPath: String?
+    @State private var isQuizInProgress = false
+    @State private var pendingSelection: SidebarItem?
+
+    private func requestSelect(_ item: SidebarItem) {
+        guard item != selection else { return }
+        if isQuizInProgress && selection == .quiz {
+            pendingSelection = item
+        } else {
+            selection = item
+        }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: $selection)
+            SidebarView(selection: selection, onSelect: requestSelect)
 
             Group {
                 switch selection {
@@ -21,10 +32,14 @@ struct RootView: View {
                     DashboardView()
                 case .quiz:
                     if let activeTopicPath {
-                        QuizView(topicPath: activeTopicPath, onBack: {
-                            self.activeTopicPath = nil
-                            selection = .dashboard
-                        })
+                        QuizView(
+                            topicPath: activeTopicPath,
+                            onBack: {
+                                self.activeTopicPath = nil
+                                selection = .dashboard
+                            },
+                            onProgressChange: { isQuizInProgress = $0 }
+                        )
                     } else {
                         QuizSetupView(
                             onBack: { selection = .dashboard },
@@ -48,6 +63,27 @@ struct RootView: View {
         }
         .background(Theme.bg)
         .ignoresSafeArea(edges: .bottom)
+        .alert(
+            "Leave quiz?",
+            isPresented: Binding(
+                get: { pendingSelection != nil },
+                set: { if !$0 { pendingSelection = nil } }
+            )
+        ) {
+            Button("Leave Quiz", role: .destructive) {
+                isQuizInProgress = false
+                activeTopicPath = nil
+                if let pendingSelection {
+                    selection = pendingSelection
+                }
+                pendingSelection = nil
+            }
+            Button("Keep Going", role: .cancel) {
+                pendingSelection = nil
+            }
+        } message: {
+            Text("Your progress on this quiz will be lost if you leave now.")
+        }
     }
 }
 
