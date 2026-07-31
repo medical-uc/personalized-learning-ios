@@ -14,16 +14,18 @@ struct QuizView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 QuizHeaderView(onBack: onBack)
-
-                VStack(alignment: .leading, spacing: 20) {
-                    QuestionCardView(question: QuizData.sampleQuestion)
-                    ConfidenceSelectorView(selection: $confidenceSelection)
-                }
+                QuestionCardView(question: QuizData.sampleQuestion)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .safeAreaInset(edge: .bottom) {
+            ConfidenceSelectorView(selection: $confidenceSelection)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
+                .background(Theme.bg)
+        }
     }
 }
 
