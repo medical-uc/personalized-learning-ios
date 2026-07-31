@@ -10,6 +10,7 @@ struct FlashcardSidePanelView: View {
         VStack(alignment: .leading, spacing: 20) {
             DeckCard()
             QuickActionsCard()
+            NavigationCard()
         }
     }
 }
@@ -157,6 +158,38 @@ private struct QuickActionsCard: View {
                     }
                 }
             }
+        }
+        .padding(18)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+}
+
+private struct NavigationCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Navigation").font(.headline)
+
+            HStack(spacing: 20) {
+                Button {} label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: 36, height: 36)
+                        .background(Theme.bg)
+                        .clipShape(Circle())
+                }
+
+                Text("\(FlashcardData.currentIndex) / \(FlashcardData.totalCards)")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                Button {} label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: 36, height: 36)
+                        .background(Theme.bg)
+                        .clipShape(Circle())
+                }
+            }
+            .foregroundStyle(Theme.dark)
         }
         .padding(18)
         .background(Color.white)

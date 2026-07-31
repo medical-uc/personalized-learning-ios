@@ -153,14 +153,25 @@ private struct FilterDropdown: View {
 
 private struct FlashcardMainCard: View {
     @Binding var isFlipped: Bool
+    @State private var displayedFace = false
 
     private var card: Flashcard { FlashcardData.cards[0] }
+
+    private func flip() {
+        let duration = 0.3
+        withAnimation(.easeInOut(duration: duration)) {
+            isFlipped.toggle()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration / 2) {
+            displayedFace = isFlipped
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(spacing: 0) {
                 HStack {
-                    Label(isFlipped ? "Back" : "Front", systemImage: "questionmark.circle")
+                    Label(displayedFace ? "Back" : "Front", systemImage: "questionmark.circle")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.dark)
                         .padding(.horizontal, 14)
@@ -184,38 +195,27 @@ private struct FlashcardMainCard: View {
                         .frame(width: 220, height: 220)
                         .foregroundStyle(Theme.bg)
 
-                    Text(isFlipped ? card.answer : card.question)
+                    Text(displayedFace ? card.answer : card.question)
                         .font(.title2.weight(.semibold))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Theme.dark)
                         .padding(.horizontal, 40)
                 }
                 .frame(maxWidth: .infinity, minHeight: 320)
-                .onTapGesture { isFlipped.toggle() }
-
-                HStack(spacing: 20) {
-                    Button {} label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: 36, height: 36)
-                            .background(Theme.bg)
-                            .clipShape(Circle())
-                    }
-
-                    Text("\(FlashcardData.currentIndex) / \(FlashcardData.totalCards)")
-                        .font(.subheadline.weight(.medium))
-
-                    Button {} label: {
-                        Image(systemName: "chevron.right")
-                            .frame(width: 36, height: 36)
-                            .background(Theme.bg)
-                            .clipShape(Circle())
-                    }
-                }
-                .foregroundStyle(Theme.dark)
                 .padding(.bottom, 28)
             }
-            .background(Color.white)
+            .background(displayedFace ? Theme.mint.opacity(0.4) : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 20))
+            .rotation3DEffect(
+                .degrees(isFlipped ? 180 : 0),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.4
+            )
+            .rotation3DEffect(
+                .degrees(displayedFace ? 180 : 0),
+                axis: (x: 0, y: 1, z: 0)
+            )
+            .onTapGesture { flip() }
 
             HStack(spacing: 6) {
                 Image(systemName: "lightbulb")
@@ -228,7 +228,7 @@ private struct FlashcardMainCard: View {
             .font(.subheadline)
             .foregroundStyle(Theme.dark)
             .frame(maxWidth: .infinity, alignment: .center)
-            .onTapGesture { isFlipped.toggle() }
+            .onTapGesture { flip() }
 
             FlashcardRatingBar()
         }
