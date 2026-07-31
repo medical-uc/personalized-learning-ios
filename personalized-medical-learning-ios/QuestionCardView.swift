@@ -8,6 +8,7 @@ import SwiftUI
 struct QuestionCardView: View {
     let question: QuizQuestion
     var totalQuestions: Int = 1
+    var isNextEnabled: Bool = true
     var onSelectOption: (Int) -> Void = { _ in }
     var onPrevious: () -> Void = {}
     var onNext: () -> Void = {}
@@ -111,8 +112,8 @@ struct QuestionCardView: View {
                 .background(Theme.dark)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(question.index >= totalQuestions)
-            .opacity(question.index >= totalQuestions ? 0.4 : 1)
+            .disabled(question.index >= totalQuestions || !isNextEnabled)
+            .opacity(question.index >= totalQuestions || !isNextEnabled ? 0.4 : 1)
         }
     }
 }

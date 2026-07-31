@@ -35,6 +35,7 @@ struct QuizView: View {
                     QuestionCardView(
                         question: question,
                         totalQuestions: viewModel.totalQuestions,
+                        isNextEnabled: confidenceSelection != nil,
                         onSelectOption: { viewModel.selectOption($0) },
                         onPrevious: { viewModel.goToPrevious() },
                         onNext: { viewModel.goToNext() }
