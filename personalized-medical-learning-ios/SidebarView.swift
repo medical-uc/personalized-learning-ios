@@ -69,7 +69,7 @@ private struct ProfileFooter: View {
                     .frame(width: 56, height: 56)
                     .overlay(Image(systemName: "person.fill").foregroundStyle(Theme.dark))
 
-                Text("Roxane Harley")
+                Text(SessionManager.fullName ?? "Student")
                     .font(.subheadline.bold())
 
                 Text("Expert")

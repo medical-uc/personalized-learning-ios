@@ -12,7 +12,7 @@ struct TopBarView: View {
                 Text("Good morning,")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text("Roxane Harley")
+                Text(SessionManager.fullName ?? "Student")
                     .font(.title.bold())
                 Text("Cardiology Department - 3rd floor")
                     .font(.caption)

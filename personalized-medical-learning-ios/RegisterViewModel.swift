@@ -26,7 +26,7 @@ final class RegisterViewModel: ObservableObject {
         do {
             let response = try await client.registerStudent(fullName: fullName, studentNumber: studentNumber, academicYear: academicYear)
             self.studentId = response.studentId
-            SessionManager.start(studentId: response.studentId, token: response.token, expiresAt: response.expiresAt)
+            SessionManager.start(studentId: response.studentId, token: response.token, expiresAt: response.expiresAt, fullName: fullName)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
