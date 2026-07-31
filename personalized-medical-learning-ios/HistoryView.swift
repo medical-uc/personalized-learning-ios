@@ -8,14 +8,28 @@ import SwiftUI
 struct HistoryView: View {
     var onBack: () -> Void = {}
 
+    @StateObject private var viewModel = HistoryViewModel()
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
-                VStack(alignment: .leading, spacing: 20) {
-                    ForEach(HistoryData.sections) { section in
-                        HistorySectionView(section: section)
+                if viewModel.isLoading {
+                    ProgressView("Loading history…")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 60)
+                } else if let errorMessage = viewModel.errorMessage, viewModel.sections.isEmpty {
+                    HistoryErrorView(message: errorMessage) {
+                        Task { await viewModel.loadHistory() }
+                    }
+                } else if viewModel.sections.isEmpty {
+                    HistoryEmptyView()
+                } else {
+                    VStack(alignment: .leading, spacing: 20) {
+                        ForEach(viewModel.sections) { section in
+                            HistorySectionView(section: section)
+                        }
                     }
                 }
             }
@@ -23,12 +37,15 @@ struct HistoryView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .task {
+            await viewModel.loadHistory()
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("History").font(.largeTitle.bold())
-            Text("Your past quiz attempts and flashcard sessions.")
+            Text("Your past quiz attempts.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -67,13 +84,13 @@ private struct HistoryRow: View {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(entry.tint.opacity(0.12))
                     .frame(width: 48, height: 48)
-                Image(systemName: entry.type.icon)
+                Image(systemName: "questionmark.circle")
                     .font(.title3)
                     .foregroundStyle(entry.tint)
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(entry.subject) · \(entry.type.label)")
+                Text("\(entry.subject) · Quiz")
                     .font(.subheadline.weight(.semibold))
                 Text("\(entry.questionCount) questions · \(entry.duration)")
                     .font(.caption2)
@@ -94,6 +111,47 @@ private struct HistoryRow: View {
         .padding(16)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+private struct HistoryEmptyView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text("No quiz attempts yet.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+}
+
+private struct HistoryErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Retry", action: onRetry)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Theme.dark)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 }
 

@@ -49,8 +49,11 @@ struct QuizView: View {
                         onPrevious: { viewModel.goToPrevious() },
                         onNext: {
                             if viewModel.isLastQuestion {
-                                viewModel.stopTimer()
-                                resultSummary = viewModel.resultSummary
+                                let summary = viewModel.resultSummary
+                                Task {
+                                    await viewModel.finishQuiz()
+                                    resultSummary = summary
+                                }
                             } else {
                                 viewModel.goToNext()
                             }

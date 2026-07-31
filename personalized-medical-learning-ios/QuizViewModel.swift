@@ -20,6 +20,7 @@ final class QuizViewModel: ObservableObject {
     private var timerCancellable: AnyCancellable?
     private var questionShownAt: Date?
     private var answerTimeTaken: [String: Double] = [:]
+    private var sessionId: String?
 
     init(topicPath: String, client: APIClient = .shared) {
         self.topicPath = topicPath
@@ -75,10 +76,13 @@ final class QuizViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let out = try await client.getQuestions(topicPath: topicPath)
+            async let questionsTask = client.getQuestions(topicPath: topicPath)
+            async let sessionTask = client.startSession(topicPath: topicPath)
+            let (out, session) = try await (questionsTask, sessionTask)
             questions = out.enumerated().map { index, question in
                 QuizQuestion(index: index + 1, questionOut: question)
             }
+            sessionId = session.sessionId
             currentIndex = 0
             startTimer()
         } catch {
@@ -123,6 +127,7 @@ final class QuizViewModel: ObservableObject {
 
     private func logAttempt(optionIndex: Int, questionID: String, confidence: ConfidenceLevel) async {
         guard let index = questions.firstIndex(where: { $0.id == questionID }), !questions[index].isLogged else { return }
+        guard let sessionId else { return }
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -131,6 +136,7 @@ final class QuizViewModel: ObservableObject {
         do {
             _ = try await client.logAttempt(
                 uid: questionID,
+                sessionId: sessionId,
                 selectedIndex: optionIndex,
                 confidence: confidence.apiValue,
                 timeTakenSeconds: timeTaken
@@ -138,6 +144,16 @@ final class QuizViewModel: ObservableObject {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].isLogged = true
             answerTimeTaken.removeValue(forKey: questionID)
+        } catch {
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func finishQuiz() async {
+        stopTimer()
+        guard let sessionId else { return }
+        do {
+            _ = try await client.endSession(sessionId: sessionId)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }

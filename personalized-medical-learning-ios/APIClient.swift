@@ -100,11 +100,13 @@ struct CheckAnswerResponse: Decodable {
 }
 
 struct LogAttemptRequest: Encodable {
+    let sessionId: String
     let selectedIndex: Int
     let confidence: String
     let timeTakenSeconds: Double
 
     enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
         case selectedIndex = "selected_index"
         case confidence
         case timeTakenSeconds = "time_taken_seconds"
@@ -119,6 +121,54 @@ struct LogAttemptResponse: Decodable {
         case eventId = "event_id"
         case correct
     }
+}
+
+struct StartSessionResponse: Decodable {
+    let sessionId: String
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+    }
+}
+
+struct EndSessionResponse: Decodable {
+    let sessionId: String
+    let questionCount: Int
+    let correctCount: Int
+    let durationSeconds: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case durationSeconds = "duration_seconds"
+    }
+}
+
+struct HistoryItem: Decodable {
+    let sessionId: String
+    let topicPath: String
+    let questionCount: Int
+    let correctCount: Int
+    let scorePercent: Int
+    let durationSeconds: Int
+    let startedAt: Date
+    let endedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case topicPath = "topic_path"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case scorePercent = "score_percent"
+        case durationSeconds = "duration_seconds"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+    }
+}
+
+struct HistoryListResponse: Decodable {
+    let items: [HistoryItem]
 }
 
 enum APIError: LocalizedError {
@@ -221,24 +271,51 @@ final class APIClient {
         )
     }
 
-    func logAttempt(uid: String, selectedIndex: Int, confidence: String, timeTakenSeconds: Double) async throws -> LogAttemptResponse {
+    func logAttempt(uid: String, sessionId: String, selectedIndex: Int, confidence: String, timeTakenSeconds: Double) async throws -> LogAttemptResponse {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to submit an answer.")
         }
         return try await send(
             path: "quiz/questions/\(uid)/log",
-            body: LogAttemptRequest(selectedIndex: selectedIndex, confidence: confidence, timeTakenSeconds: timeTakenSeconds),
+            body: LogAttemptRequest(sessionId: sessionId, selectedIndex: selectedIndex, confidence: confidence, timeTakenSeconds: timeTakenSeconds),
             expectedStatus: 200,
             token: token
         )
     }
 
-    private func get<Response: Decodable>(path: String) async throws -> Response {
+    func startSession(topicPath: String) async throws -> StartSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to start a quiz.")
+        }
+        return try await post(path: "quiz/topics/\(topicPath)/sessions", expectedStatus: 200, token: token)
+    }
+
+    func endSession(sessionId: String) async throws -> EndSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to end a quiz.")
+        }
+        return try await post(path: "quiz/sessions/\(sessionId)/end", expectedStatus: 200, token: token)
+    }
+
+    func getHistory() async throws -> [HistoryItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view history.")
+        }
+        let response: HistoryListResponse = try await get(path: "quiz/history", token: token)
+        return response.items
+    }
+
+    private func get<Response: Decodable>(path: String, token: String? = nil) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
+
+        var request = URLRequest(url: url)
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await session.data(from: url)
+            (data, response) = try await session.data(for: request)
         } catch {
             throw APIError.network(error)
         }
@@ -248,6 +325,37 @@ final class APIClient {
         }
 
         guard httpResponse.statusCode == 200 else {
+            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Request")
+        }
+
+        do {
+            return try decoder.decode(Response.self, from: data)
+        } catch {
+            throw APIError.decoding
+        }
+    }
+
+    private func post<Response: Decodable>(path: String, expectedStatus: Int, token: String? = nil) async throws -> Response {
+        let url = APIConfig.baseURL.appendingPathComponent(path)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.network(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.decoding
+        }
+
+        guard httpResponse.statusCode == expectedStatus else {
             throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Request")
         }
 
