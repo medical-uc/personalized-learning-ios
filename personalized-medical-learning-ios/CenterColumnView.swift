@@ -6,12 +6,48 @@
 import SwiftUI
 
 struct CenterColumnView: View {
+    @StateObject private var reviewDueViewModel = ReviewDueViewModel()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            if reviewDueViewModel.dueCount > 0 {
+                ReviewDueCard(count: reviewDueViewModel.dueCount)
+            }
             DayStreakCard()
             StatisticsSection()
             UpcomingQuizzesSection()
         }
+        .task {
+            await reviewDueViewModel.loadDueCount()
+        }
+    }
+}
+
+private struct ReviewDueCard: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(Color.orange.opacity(0.15)).frame(width: 40, height: 40)
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(count) question\(count == 1 ? "" : "s") due for review")
+                    .font(.subheadline.bold())
+                Text("Spaced repetition says it's time to revisit these.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

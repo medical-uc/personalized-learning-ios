@@ -169,6 +169,26 @@ struct HistoryListResponse: Decodable {
     let items: [HistoryItem]
 }
 
+struct DueReviewItem: Decodable {
+    let questionUid: String
+    let streak: Int
+    let intervalDays: Int
+    let lastReviewedAt: Date
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case questionUid = "question_uid"
+        case streak
+        case intervalDays = "interval_days"
+        case lastReviewedAt = "last_reviewed_at"
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct DueReviewResponse: Decodable {
+    let items: [DueReviewItem]
+}
+
 enum APIError: LocalizedError {
     case server(String)
     case decoding
@@ -300,6 +320,14 @@ final class APIClient {
             throw APIError.server("You must be signed in to view history.")
         }
         let response: HistoryListResponse = try await get(path: "quiz/history", token: token)
+        return response.items
+    }
+
+    func getDueForReview() async throws -> [DueReviewItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view review items.")
+        }
+        let response: DueReviewResponse = try await get(path: "quiz/review/due", token: token)
         return response.items
     }
 
