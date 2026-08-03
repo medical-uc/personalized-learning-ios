@@ -19,13 +19,11 @@ struct StudentRegisterRequest: Encodable {
 
 struct StudentRegisterResponse: Decodable {
     let studentId: String
-    let eventId: String
     let token: String
     let expiresAt: Date
 
     enum CodingKeys: String, CodingKey {
         case studentId = "student_id"
-        case eventId = "event_id"
         case token
         case expiresAt = "expires_at"
     }
@@ -186,7 +184,7 @@ enum APIError: LocalizedError {
 }
 
 enum APIConfig {
-    static let baseURL = URL(string: "http://10.67.52.231:8000")!
+    static let baseURL = URL(string: "http://10.67.54.37:8000")!
 }
 
 final class APIClient {
