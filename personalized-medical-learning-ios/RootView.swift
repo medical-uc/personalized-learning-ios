@@ -10,6 +10,7 @@ struct RootView: View {
 
     @State private var selection: SidebarItem = .dashboard
     @State private var activeTopicPath: String?
+    @State private var activeQuestionCount: Int = 10
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
 
@@ -34,6 +35,7 @@ struct RootView: View {
                     if let activeTopicPath {
                         QuizView(
                             topicPath: activeTopicPath,
+                            questionCount: activeQuestionCount,
                             onBack: {
                                 self.activeTopicPath = nil
                                 selection = .dashboard
@@ -43,7 +45,10 @@ struct RootView: View {
                     } else {
                         QuizSetupView(
                             onBack: { selection = .dashboard },
-                            onStart: { topic, _ in activeTopicPath = topic.path }
+                            onStart: { topic, settings in
+                                activeTopicPath = topic.path
+                                activeQuestionCount = settings.questionCount
+                            }
                         )
                     }
                 case .flashcards:

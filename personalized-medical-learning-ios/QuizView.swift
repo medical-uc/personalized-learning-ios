@@ -7,6 +7,7 @@ import SwiftUI
 
 struct QuizView: View {
     var topicPath: String
+    var questionCount: Int?
     var onBack: () -> Void = {}
     var onProgressChange: (Bool) -> Void = { _ in }
 
@@ -15,11 +16,12 @@ struct QuizView: View {
     @State private var resultSummary: QuizResultSummary?
     @State private var showExitConfirm = false
 
-    init(topicPath: String, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
+    init(topicPath: String, questionCount: Int? = nil, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
         self.topicPath = topicPath
+        self.questionCount = questionCount
         self.onBack = onBack
         self.onProgressChange = onProgressChange
-        _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath))
+        _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath, questionCount: questionCount))
     }
 
     var body: some View {
@@ -106,6 +108,7 @@ struct QuizView: View {
         }
         .onDisappear {
             viewModel.stopTimer()
+            Task { await viewModel.cancelQuiz() }
         }
     }
 }

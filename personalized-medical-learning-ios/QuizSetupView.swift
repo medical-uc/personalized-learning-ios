@@ -288,6 +288,18 @@ private struct QuizSettingsStepView: View {
 
             Divider()
 
+            SettingRow(title: "Number of Questions", subtitle: "How many questions to include") {
+                Menu {
+                    ForEach(QuizSetupOptions.questionCountOptions, id: \.self) { count in
+                        Button("\(count) questions") { settings.questionCount = count }
+                    }
+                } label: {
+                    PickerLabel(text: "\(settings.questionCount)")
+                }
+            }
+
+            Divider()
+
             SettingRow(title: "Timer", subtitle: "Add time limit per question") {
                 HStack(spacing: 10) {
                     if settings.isTimerEnabled {
@@ -364,6 +376,7 @@ private struct QuizPreviewStepView: View {
 
             HStack(spacing: 0) {
                 PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: topic.name, label: "Topic")
+                PreviewStatTile(icon: "list.number", tint: .purple, value: "\(settings.questionCount)", label: "Questions")
                 PreviewStatTile(icon: "clock.fill", tint: .blue, value: settings.isTimerEnabled ? "\(settings.secondsPerQuestion) sec" : "Off", label: "Per Question")
             }
             .padding(.vertical, 4)

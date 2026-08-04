@@ -143,6 +143,20 @@ struct EndSessionResponse: Decodable {
     }
 }
 
+struct CancelSessionResponse: Decodable {
+    let sessionId: String
+    let questionCount: Int
+    let correctCount: Int
+    let durationSeconds: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case durationSeconds = "duration_seconds"
+    }
+}
+
 struct HistoryItem: Decodable {
     let sessionId: String
     let topicPath: String
@@ -313,6 +327,13 @@ final class APIClient {
             throw APIError.server("You must be signed in to end a quiz.")
         }
         return try await post(path: "quiz/sessions/\(sessionId)/end", expectedStatus: 200, token: token)
+    }
+
+    func cancelSession(sessionId: String) async throws -> CancelSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to cancel a quiz.")
+        }
+        return try await post(path: "quiz/sessions/\(sessionId)/cancel", expectedStatus: 200, token: token)
     }
 
     func getHistory() async throws -> [HistoryItem] {

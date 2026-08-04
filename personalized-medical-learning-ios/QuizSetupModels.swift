@@ -56,8 +56,10 @@ struct QuizSettings {
     var isTimerEnabled: Bool = true
     var secondsPerQuestion: Int = 60
     var isReviewModeEnabled: Bool = true
+    var questionCount: Int = 10
 }
 
 enum QuizSetupOptions {
     static let timerOptions = [15, 30, 45, 60, 90, 120]
+    static let questionCountOptions = [5, 10, 15, 20, 25]
 }

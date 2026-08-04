@@ -16,14 +16,16 @@ final class QuizViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     let topicPath: String
+    private let questionCount: Int?
     private let client: APIClient
     private var timerCancellable: AnyCancellable?
     private var questionShownAt: Date?
     private var answerTimeTaken: [String: Double] = [:]
     private var sessionId: String?
 
-    init(topicPath: String, client: APIClient = .shared) {
+    init(topicPath: String, questionCount: Int? = nil, client: APIClient = .shared) {
         self.topicPath = topicPath
+        self.questionCount = questionCount
         self.client = client
     }
 
@@ -36,6 +38,11 @@ final class QuizViewModel: ObservableObject {
     private func startTimer() {
         guard timerCancellable == nil else { return }
         elapsedSeconds = 0
+        resumeTimer()
+    }
+
+    func resumeTimer() {
+        guard timerCancellable == nil else { return }
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -43,13 +50,22 @@ final class QuizViewModel: ObservableObject {
             }
     }
 
-    func stopTimer() {
+    func pauseTimer() {
         timerCancellable?.cancel()
         timerCancellable = nil
     }
 
+    func stopTimer() {
+        pauseTimer()
+    }
+
     func onQuestionAppear() {
         questionShownAt = Date()
+        if currentQuestion?.selectedIndex == nil {
+            resumeTimer()
+        } else {
+            pauseTimer()
+        }
     }
 
     var currentQuestion: QuizQuestion? {
@@ -79,7 +95,8 @@ final class QuizViewModel: ObservableObject {
             async let questionsTask = client.getQuestions(topicPath: topicPath)
             async let sessionTask = client.startSession(topicPath: topicPath)
             let (out, session) = try await (questionsTask, sessionTask)
-            questions = out.enumerated().map { index, question in
+            let limited = questionCount.map { Array(out.prefix($0)) } ?? out
+            questions = limited.enumerated().map { index, question in
                 QuizQuestion(index: index + 1, questionOut: question)
             }
             sessionId = session.sessionId
@@ -97,6 +114,7 @@ final class QuizViewModel: ObservableObject {
         let questionID = question.id
 
         answerTimeTaken[questionID] = Date().timeIntervalSince(questionShownAt ?? Date())
+        pauseTimer()
 
         Task {
             await checkAnswer(optionIndex: optionIndex, questionID: questionID)
@@ -154,9 +172,17 @@ final class QuizViewModel: ObservableObject {
         guard let sessionId else { return }
         do {
             _ = try await client.endSession(sessionId: sessionId)
+            self.sessionId = nil
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
+    }
+
+    func cancelQuiz() async {
+        stopTimer()
+        guard let sessionId else { return }
+        self.sessionId = nil
+        _ = try? await client.cancelSession(sessionId: sessionId)
     }
 
     func goToNext() {
