@@ -8,13 +8,35 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isLoggedIn = SessionManager.isValid
+    private enum SessionState {
+        case checking
+        case loggedIn
+        case loggedOut
+    }
+
+    @State private var sessionState: SessionState = SessionManager.isValid ? .checking : .loggedOut
 
     var body: some View {
-        if isLoggedIn {
-            RootView(onLogOut: { isLoggedIn = false })
-        } else {
-            LoginView(onLogIn: { isLoggedIn = true })
+        switch sessionState {
+        case .checking:
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .task {
+                    if let session = await APIClient.shared.checkSession(), session.authenticated {
+                        SessionManager.updateStudentId(session.studentId)
+                        sessionState = .loggedIn
+                    } else {
+                        SessionManager.end()
+                        sessionState = .loggedOut
+                    }
+                }
+        case .loggedIn:
+            RootView(onLogOut: { sessionState = .loggedOut })
+                .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+                    sessionState = .loggedOut
+                }
+        case .loggedOut:
+            LoginView(onLogIn: { sessionState = .loggedIn })
         }
     }
 }

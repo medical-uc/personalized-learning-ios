@@ -49,6 +49,16 @@ struct SessionResponse: Decodable {
     }
 }
 
+struct SessionCheckResponse: Decodable {
+    let authenticated: Bool
+    let studentId: String
+
+    enum CodingKeys: String, CodingKey {
+        case authenticated
+        case studentId = "student_id"
+    }
+}
+
 struct APIValidationError: Decodable {
     struct Detail: Decodable {
         let msg: String
@@ -292,14 +302,20 @@ enum APIError: LocalizedError {
     case server(String)
     case decoding
     case network(Error)
+    case unauthorized
 
     var errorDescription: String? {
         switch self {
         case .server(let message): return message
         case .decoding: return "Received an unexpected response from the server."
         case .network(let error): return error.localizedDescription
+        case .unauthorized: return "Your session has expired. Please sign in again."
         }
     }
+}
+
+extension Notification.Name {
+    static let sessionExpired = Notification.Name("sessionExpired")
 }
 
 enum APIConfig {
@@ -477,7 +493,25 @@ final class APIClient {
         return response.items
     }
 
-    private func get<Response: Decodable>(path: String, token: String? = nil) async throws -> Response {
+    /// Validates the stored token against the server. Returns nil for a missing/invalid/expired token
+    /// rather than throwing, since 401 is an expected outcome here, not an error condition.
+    func checkSession() async -> SessionCheckResponse? {
+        guard let token = SessionManager.token else { return nil }
+
+        let url = APIConfig.baseURL.appendingPathComponent("students/me")
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (data, response) = try? await session.data(for: request),
+              let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            return nil
+        }
+
+        return try? decoder.decode(SessionCheckResponse.self, from: data)
+    }
+
+    private func get<Response: Decodable>(path: String, token: String? = SessionManager.token) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
 
         var request = URLRequest(url: url)
@@ -507,7 +541,7 @@ final class APIClient {
         }
     }
 
-    private func post<Response: Decodable>(path: String, expectedStatus: Int, token: String? = nil) async throws -> Response {
+    private func post<Response: Decodable>(path: String, expectedStatus: Int, token: String? = SessionManager.token) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
 
         var request = URLRequest(url: url)
@@ -542,7 +576,7 @@ final class APIClient {
         path: String,
         body: Body,
         expectedStatus: Int,
-        token: String? = nil
+        token: String? = SessionManager.token
     ) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
 
@@ -577,6 +611,11 @@ final class APIClient {
     }
 
     private func makeServerError(data: Data, statusCode: Int, action: String) throws -> APIError {
+        if statusCode == 401 {
+            SessionManager.end()
+            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+            return .unauthorized
+        }
         if let validationError = try? JSONDecoder().decode(APIValidationError.self, from: data),
            let firstMessage = validationError.detail.first?.msg {
             return .server(firstMessage)

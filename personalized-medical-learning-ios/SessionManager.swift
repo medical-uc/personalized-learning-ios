@@ -48,4 +48,8 @@ enum SessionManager {
         KeychainStore.remove(forKey: expiresAtKey)
         KeychainStore.remove(forKey: fullNameKey)
     }
+
+    static func updateStudentId(_ studentId: String) {
+        KeychainStore.set(studentId, forKey: studentIdKey)
+    }
 }
