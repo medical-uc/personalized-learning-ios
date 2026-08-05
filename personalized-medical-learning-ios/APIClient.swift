@@ -90,10 +90,12 @@ struct CheckAnswerRequest: Encodable {
 struct CheckAnswerResponse: Decodable {
     let correct: Bool
     let correctIndex: Int
+    let explanation: String
 
     enum CodingKeys: String, CodingKey {
         case correct
         case correctIndex = "correct_index"
+        case explanation
     }
 }
 
@@ -219,6 +221,7 @@ struct FlashcardOut: Decodable {
 struct FlashcardRevealResponse: Decodable {
     let uid: String
     let back: String
+    let explanation: String
 }
 
 enum FlashcardRating: String, Encodable {

@@ -136,6 +136,7 @@ final class QuizViewModel: ObservableObject {
             let result = try await client.checkAnswer(uid: questionID, selectedIndex: optionIndex)
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].correctIndex = result.correctIndex
+            questions[index].explanationBody = result.explanation
         } catch {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].selectedIndex = nil

@@ -51,6 +51,7 @@ final class FlashcardViewModel: ObservableObject {
             let result = try await client.revealCard(uid: card.uid)
             guard let index = cards.firstIndex(where: { $0.uid == card.uid }) else { return }
             cards[index].back = result.back
+            cards[index].explanation = result.explanation
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }

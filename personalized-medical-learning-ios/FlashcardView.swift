@@ -250,7 +250,7 @@ private struct FlashcardMainCard: View {
                         if displayedFace && viewModel.isRevealing {
                             ProgressView()
                         } else {
-                            Text(displayedFace ? (card.back ?? "") : card.front)
+                            Text(displayedFace ? (card.explanation ?? "") : card.front)
                                 .font(.title2.weight(.semibold))
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(Theme.dark)

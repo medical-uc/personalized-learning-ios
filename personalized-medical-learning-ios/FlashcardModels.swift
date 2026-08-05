@@ -9,6 +9,7 @@ struct Flashcard: Identifiable {
     let uid: String
     let front: String
     var back: String?
+    var explanation: String?
     let topicTag: [String]
     let difficulty: Int
     var rating: FlashcardRating?
@@ -19,6 +20,7 @@ struct Flashcard: Identifiable {
         self.uid = cardOut.uid
         self.front = cardOut.front
         self.back = nil
+        self.explanation = nil
         self.topicTag = cardOut.topicTag
         self.difficulty = cardOut.difficulty
         self.rating = nil
