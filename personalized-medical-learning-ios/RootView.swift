@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var activeQuestionCount: Int = 10
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
+    @State private var flashcardTopicPath: String?
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
@@ -52,7 +53,15 @@ struct RootView: View {
                         )
                     }
                 case .flashcards:
-                    FlashcardView(onBack: { selection = .dashboard })
+                    if let flashcardTopicPath {
+                        FlashcardView(topicPath: flashcardTopicPath, onBack: { selection = .dashboard })
+                    } else {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .task {
+                                flashcardTopicPath = (try? await APIClient.shared.listTopics())?.first
+                            }
+                    }
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })
                 case .bookmarks:

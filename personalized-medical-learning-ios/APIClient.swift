@@ -203,6 +203,66 @@ struct DueReviewResponse: Decodable {
     let items: [DueReviewItem]
 }
 
+struct FlashcardOut: Decodable {
+    let uid: String
+    let front: String
+    let topicTag: [String]
+    let difficulty: Int
+
+    enum CodingKeys: String, CodingKey {
+        case uid, front
+        case topicTag = "topic_tag"
+        case difficulty
+    }
+}
+
+struct FlashcardRevealResponse: Decodable {
+    let uid: String
+    let back: String
+}
+
+enum FlashcardRating: String, Encodable {
+    case again, hard, good, easy
+}
+
+struct LogFlashcardReviewRequest: Encodable {
+    let rating: FlashcardRating
+}
+
+struct LogFlashcardReviewResponse: Decodable {
+    let eventId: String
+    let streak: Int
+    let intervalDays: Int
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
+        case streak
+        case intervalDays = "interval_days"
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct DueFlashcardItem: Decodable {
+    let questionUid: String
+    let streak: Int
+    let intervalDays: Int
+    let lastReviewedAt: Date
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case questionUid = "question_uid"
+        case streak
+        case intervalDays = "interval_days"
+        case lastReviewedAt = "last_reviewed_at"
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct DueFlashcardResponse: Decodable {
+    let items: [DueFlashcardItem]
+}
+
 enum APIError: LocalizedError {
     case server(String)
     case decoding
@@ -349,6 +409,34 @@ final class APIClient {
             throw APIError.server("You must be signed in to view review items.")
         }
         let response: DueReviewResponse = try await get(path: "quiz/review/due", token: token)
+        return response.items
+    }
+
+    func getCards(topicPath: String) async throws -> [FlashcardOut] {
+        try await get(path: "flashcards/topics/\(topicPath)/cards")
+    }
+
+    func revealCard(uid: String) async throws -> FlashcardRevealResponse {
+        try await post(path: "flashcards/cards/\(uid)/reveal", expectedStatus: 200)
+    }
+
+    func logReview(uid: String, rating: FlashcardRating) async throws -> LogFlashcardReviewResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to log a review.")
+        }
+        return try await send(
+            path: "flashcards/cards/\(uid)/log",
+            body: LogFlashcardReviewRequest(rating: rating),
+            expectedStatus: 200,
+            token: token
+        )
+    }
+
+    func getDueFlashcards() async throws -> [DueFlashcardItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view review items.")
+        }
+        let response: DueFlashcardResponse = try await get(path: "flashcards/review/due", token: token)
         return response.items
     }
 

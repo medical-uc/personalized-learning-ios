@@ -6,11 +6,13 @@
 import SwiftUI
 
 struct FlashcardSidePanelView: View {
+    @ObservedObject var viewModel: FlashcardViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             DeckCard()
             QuickActionsCard()
-            NavigationCard()
+            NavigationCard(viewModel: viewModel)
         }
     }
 }
@@ -166,28 +168,32 @@ private struct QuickActionsCard: View {
 }
 
 private struct NavigationCard: View {
+    @ObservedObject var viewModel: FlashcardViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Navigation").font(.headline)
 
             HStack(spacing: 20) {
-                Button {} label: {
+                Button(action: viewModel.goToPrevious) {
                     Image(systemName: "chevron.left")
                         .frame(width: 36, height: 36)
                         .background(Theme.bg)
                         .clipShape(Circle())
                 }
+                .disabled(viewModel.currentIndex == 0)
 
-                Text("\(FlashcardData.currentIndex) / \(FlashcardData.totalCards)")
+                Text("\(min(viewModel.currentIndex + 1, viewModel.totalCards)) / \(viewModel.totalCards)")
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity, alignment: .center)
 
-                Button {} label: {
+                Button(action: viewModel.goToNext) {
                     Image(systemName: "chevron.right")
                         .frame(width: 36, height: 36)
                         .background(Theme.bg)
                         .clipShape(Circle())
                 }
+                .disabled(viewModel.currentIndex + 1 >= viewModel.totalCards)
             }
             .foregroundStyle(Theme.dark)
         }
@@ -199,7 +205,7 @@ private struct NavigationCard: View {
 
 #Preview {
     ScrollView {
-        FlashcardSidePanelView()
+        FlashcardSidePanelView(viewModel: FlashcardViewModel(topicPath: "cardiology"))
             .padding()
             .frame(width: 340)
     }

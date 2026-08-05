@@ -6,9 +6,23 @@
 import SwiftUI
 
 struct Flashcard: Identifiable {
-    let id = UUID()
-    let question: String
-    let answer: String
+    let uid: String
+    let front: String
+    var back: String?
+    let topicTag: [String]
+    let difficulty: Int
+    var rating: FlashcardRating?
+
+    var id: String { uid }
+
+    init(cardOut: FlashcardOut) {
+        self.uid = cardOut.uid
+        self.front = cardOut.front
+        self.back = nil
+        self.topicTag = cardOut.topicTag
+        self.difficulty = cardOut.difficulty
+        self.rating = nil
+    }
 }
 
 struct TodayStatItem: Identifiable {
@@ -25,16 +39,6 @@ struct QuickActionItem: Identifiable {
 }
 
 enum FlashcardData {
-    static let cards: [Flashcard] = [
-        .init(
-            question: "What is the most common cause of acute myocardial infarction?",
-            answer: "Rupture of an atherosclerotic plaque leading to coronary artery thrombosis."
-        )
-    ]
-
-    static let currentIndex = 12
-    static let totalCards = 150
-
     static let cardsStudied = 126
     static let cardsGoal = 200
     static let dayStreak = 12

@@ -6,11 +6,19 @@
 import SwiftUI
 
 struct FlashcardView: View {
+    var topicPath: String
     var onBack: () -> Void = {}
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @StateObject private var viewModel: FlashcardViewModel
     @State private var isFlipped = false
     @State private var showAnswerFirst = false
+
+    init(topicPath: String, onBack: @escaping () -> Void = {}) {
+        self.topicPath = topicPath
+        self.onBack = onBack
+        _viewModel = StateObject(wrappedValue: FlashcardViewModel(topicPath: topicPath))
+    }
 
     var body: some View {
         ScrollView {
@@ -18,18 +26,26 @@ struct FlashcardView: View {
                 FlashcardHeaderView(onBack: onBack)
                 FlashcardFilterBar(showAnswerFirst: $showAnswerFirst)
 
-                if horizontalSizeClass == .regular {
+                if viewModel.isLoading {
+                    ProgressView("Loading cards…")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 60)
+                } else if let errorMessage = viewModel.errorMessage, viewModel.cards.isEmpty {
+                    FlashcardErrorView(message: errorMessage) {
+                        Task { await viewModel.loadCards() }
+                    }
+                } else if horizontalSizeClass == .regular {
                     HStack(alignment: .top, spacing: 20) {
-                        FlashcardMainCard(isFlipped: $isFlipped)
+                        FlashcardMainCard(isFlipped: $isFlipped, viewModel: viewModel)
                             .frame(maxWidth: .infinity)
 
-                        FlashcardSidePanelView()
+                        FlashcardSidePanelView(viewModel: viewModel)
                             .frame(width: 320)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 20) {
-                        FlashcardMainCard(isFlipped: $isFlipped)
-                        FlashcardSidePanelView()
+                        FlashcardMainCard(isFlipped: $isFlipped, viewModel: viewModel)
+                        FlashcardSidePanelView(viewModel: viewModel)
                     }
                 }
             }
@@ -37,6 +53,38 @@ struct FlashcardView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .task {
+            await viewModel.loadCards()
+        }
+        .onChange(of: viewModel.currentIndex) {
+            isFlipped = false
+        }
+    }
+}
+
+private struct FlashcardErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Retry", action: onRetry)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Theme.dark)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 }
 
@@ -153,11 +201,11 @@ private struct FilterDropdown: View {
 
 private struct FlashcardMainCard: View {
     @Binding var isFlipped: Bool
+    @ObservedObject var viewModel: FlashcardViewModel
     @State private var displayedFace = false
 
-    private var card: Flashcard { FlashcardData.cards[0] }
-
     private func flip() {
+        guard let card = viewModel.currentCard else { return }
         let duration = 0.3
         withAnimation(.easeInOut(duration: duration)) {
             isFlipped.toggle()
@@ -165,84 +213,108 @@ private struct FlashcardMainCard: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + duration / 2) {
             displayedFace = isFlipped
         }
+        if card.back == nil {
+            Task { await viewModel.revealCurrentCard() }
+        }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(spacing: 0) {
-                HStack {
-                    Label(displayedFace ? "Back" : "Front", systemImage: "questionmark.circle")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Theme.dark)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Theme.bg)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                    Spacer()
-
-                    Button {} label: {
-                        Image(systemName: "star")
+        if let card = viewModel.currentCard {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Label(displayedFace ? "Back" : "Front", systemImage: "questionmark.circle")
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(Theme.dark)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Theme.bg)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        Spacer()
+
+                        Button {} label: {
+                            Image(systemName: "star")
+                                .foregroundStyle(Theme.dark)
+                        }
                     }
+                    .padding(24)
+
+                    ZStack {
+                        Image(systemName: "heart.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 220, height: 220)
+                            .foregroundStyle(Theme.bg)
+
+                        if displayedFace && viewModel.isRevealing {
+                            ProgressView()
+                        } else {
+                            Text(displayedFace ? (card.back ?? "") : card.front)
+                                .font(.title2.weight(.semibold))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(Theme.dark)
+                                .padding(.horizontal, 40)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .padding(.bottom, 28)
                 }
-                .padding(24)
+                .background(displayedFace ? Theme.mint.opacity(0.4) : Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .rotation3DEffect(
+                    .degrees(isFlipped ? 180 : 0),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.4
+                )
+                .rotation3DEffect(
+                    .degrees(displayedFace ? 180 : 0),
+                    axis: (x: 0, y: 1, z: 0)
+                )
+                .onTapGesture { flip() }
 
-                ZStack {
-                    Image(systemName: "heart.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 220, height: 220)
-                        .foregroundStyle(Theme.bg)
-
-                    Text(displayedFace ? card.answer : card.question)
-                        .font(.title2.weight(.semibold))
-                        .multilineTextAlignment(.center)
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb")
+                    Text("Don't know the answer?")
+                        .foregroundStyle(.secondary)
+                    Text("Tap to flip the card")
                         .foregroundStyle(Theme.dark)
-                        .padding(.horizontal, 40)
+                        .fontWeight(.medium)
                 }
-                .frame(maxWidth: .infinity, minHeight: 320)
-                .padding(.bottom, 28)
-            }
-            .background(displayedFace ? Theme.mint.opacity(0.4) : Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .rotation3DEffect(
-                .degrees(isFlipped ? 180 : 0),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.4
-            )
-            .rotation3DEffect(
-                .degrees(displayedFace ? 180 : 0),
-                axis: (x: 0, y: 1, z: 0)
-            )
-            .onTapGesture { flip() }
+                .font(.subheadline)
+                .foregroundStyle(Theme.dark)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .onTapGesture { flip() }
 
-            HStack(spacing: 6) {
-                Image(systemName: "lightbulb")
-                Text("Don't know the answer?")
-                    .foregroundStyle(.secondary)
-                Text("Tap to flip the card")
-                    .foregroundStyle(Theme.dark)
-                    .fontWeight(.medium)
+                FlashcardRatingBar(viewModel: viewModel)
             }
-            .font(.subheadline)
-            .foregroundStyle(Theme.dark)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .onTapGesture { flip() }
-
-            FlashcardRatingBar()
         }
     }
 }
 
 private struct FlashcardRatingBar: View {
+    @ObservedObject var viewModel: FlashcardViewModel
+
+    private var selectedRating: FlashcardRating? {
+        viewModel.currentCard?.rating
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            RatingButton(icon: "arrow.counterclockwise", title: "Again", tint: .red)
-            RatingButton(icon: "minus.circle", title: "Difficult", tint: .orange)
-            RatingButton(icon: "checkmark.circle", title: "Good", tint: .green)
-            RatingButton(icon: "chevron.right.2", title: "Easy", tint: .white, isFilled: true)
+            RatingButton(icon: "arrow.counterclockwise", title: "Again", tint: .red, isFilled: selectedRating == .again) {
+                viewModel.rateCurrentCard(.again)
+            }
+            RatingButton(icon: "minus.circle", title: "Hard", tint: .orange, isFilled: selectedRating == .hard) {
+                viewModel.rateCurrentCard(.hard)
+            }
+            RatingButton(icon: "checkmark.circle", title: "Good", tint: .green, isFilled: selectedRating == .good) {
+                viewModel.rateCurrentCard(.good)
+            }
+            RatingButton(icon: "chevron.right.2", title: "Easy", tint: .green, isFilled: selectedRating == .easy) {
+                viewModel.rateCurrentCard(.easy)
+            }
         }
+        .disabled(selectedRating != nil)
     }
 }
 
@@ -251,9 +323,10 @@ private struct RatingButton: View {
     let title: String
     let tint: Color
     var isFilled: Bool = false
+    var onTap: () -> Void = {}
 
     var body: some View {
-        Button {} label: {
+        Button(action: onTap) {
             VStack(spacing: 8) {
                 Image(systemName: icon).font(.title3)
                 Text(title).font(.subheadline.weight(.semibold))
