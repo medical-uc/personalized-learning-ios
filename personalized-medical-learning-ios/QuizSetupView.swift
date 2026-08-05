@@ -156,10 +156,21 @@ private struct ChooseTopicsStepView: View {
     var onNext: () -> Void
 
     @State private var searchText = ""
+    @State private var expandedSubject: String?
 
-    private var filteredTopics: [QuizTopic] {
-        guard !searchText.isEmpty else { return topics }
-        return topics.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    private var groups: [QuizSubjectGroup] {
+        let grouped = Dictionary(grouping: topics, by: \.subject)
+        return grouped.keys.sorted().map { subject in
+            QuizSubjectGroup(subject: subject, topics: grouped[subject]!.sorted { $0.name < $1.name })
+        }
+    }
+
+    private var filteredTopics: [QuizTopic]? {
+        guard !searchText.isEmpty else { return nil }
+        return topics.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.subject.localizedCaseInsensitiveContains(searchText)
+        }
     }
 
     var body: some View {
@@ -200,15 +211,37 @@ private struct ChooseTopicsStepView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
+            } else if let filteredTopics {
+                VStack(spacing: 10) {
+                    if filteredTopics.isEmpty {
+                        Text("No topics match \"\(searchText)\".")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                    } else {
+                        ForEach(filteredTopics) { topic in
+                            TopicRow(
+                                topic: topic,
+                                subtitle: topic.subject,
+                                isSelected: selectedTopicID == topic.id
+                            ) {
+                                selectedTopicID = topic.id
+                            }
+                        }
+                    }
+                }
             } else {
                 VStack(spacing: 10) {
-                    ForEach(filteredTopics) { topic in
-                        TopicRow(
-                            topic: topic,
-                            isSelected: selectedTopicID == topic.id
-                        ) {
-                            selectedTopicID = topic.id
-                        }
+                    ForEach(groups) { group in
+                        SubjectGroupSection(
+                            group: group,
+                            isExpanded: expandedSubject == group.subject,
+                            selectedTopicID: $selectedTopicID,
+                            onToggle: {
+                                expandedSubject = expandedSubject == group.subject ? nil : group.subject
+                            }
+                        )
                     }
                 }
             }
@@ -237,8 +270,70 @@ private struct ChooseTopicsStepView: View {
     }
 }
 
+private struct SubjectGroupSection: View {
+    let group: QuizSubjectGroup
+    let isExpanded: Bool
+    @Binding var selectedTopicID: String?
+    var onToggle: () -> Void
+
+    private var selectedTopicInGroup: QuizTopic? {
+        group.topics.first { $0.id == selectedTopicID }
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Button(action: onToggle) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(Theme.dark.opacity(0.1)).frame(width: 44, height: 44)
+                        Image(systemName: "folder.fill").foregroundStyle(Theme.dark)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(group.subject).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                        Text(selectedTopicInGroup.map { "Selected: \($0.name)" } ?? "\(group.topics.count) topics")
+                            .font(.caption2)
+                            .foregroundStyle(selectedTopicInGroup == nil ? .secondary : Theme.dark)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(14)
+                .background(Theme.bg)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(selectedTopicInGroup == nil ? Color.clear : Theme.dark, lineWidth: 1.5)
+                )
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(spacing: 8) {
+                    ForEach(group.topics) { topic in
+                        TopicRow(
+                            topic: topic,
+                            subtitle: nil,
+                            isSelected: selectedTopicID == topic.id
+                        ) {
+                            selectedTopicID = topic.id
+                        }
+                    }
+                }
+                .padding(.leading, 16)
+            }
+        }
+    }
+}
+
 private struct TopicRow: View {
     let topic: QuizTopic
+    var subtitle: String? = nil
     let isSelected: Bool
     let onToggle: () -> Void
 
@@ -250,7 +345,12 @@ private struct TopicRow: View {
                     Image(systemName: topic.icon).foregroundStyle(topic.tint)
                 }
 
-                Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                    if let subtitle {
+                        Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
 
                 Spacer()
 

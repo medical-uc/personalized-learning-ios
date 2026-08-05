@@ -8,24 +8,31 @@ import SwiftUI
 struct QuizTopic: Identifiable, Equatable {
     var id: String { path }
     let path: String
+    let subject: String
     let name: String
     let icon: String
     let tint: Color
 
+    /// Server paths look like "Anatomy of Endocrine Glands > Thyroid gland anatomy" —
+    /// the segment before " > " is the subject, the rest is the topic name.
     static func fromServerPath(_ path: String) -> QuizTopic {
-        let display = path
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "-", with: " ")
-            .split(separator: "/")
-            .last
-            .map(String.init) ?? path
+        let parts = path.components(separatedBy: " > ")
+        let subject = parts.first ?? path
+        let name = parts.count > 1 ? parts.dropFirst().joined(separator: " > ") : path
         return QuizTopic(
             path: path,
-            name: display.capitalized,
+            subject: subject,
+            name: name,
             icon: "book.closed.fill",
             tint: Theme.dark
         )
     }
+}
+
+struct QuizSubjectGroup: Identifiable {
+    var id: String { subject }
+    let subject: String
+    let topics: [QuizTopic]
 }
 
 enum QuizSetupStep: Int, CaseIterable, Identifiable {
