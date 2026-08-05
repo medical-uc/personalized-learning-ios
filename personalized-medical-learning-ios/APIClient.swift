@@ -59,6 +59,22 @@ struct SessionCheckResponse: Decodable {
     }
 }
 
+struct StudentProfileResponse: Decodable {
+    let studentId: String
+    let fullName: String
+    let studentNumber: String
+    let academicYear: Int
+    let enrolledAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case studentId = "student_id"
+        case fullName = "full_name"
+        case studentNumber = "student_number"
+        case academicYear = "academic_year"
+        case enrolledAt = "enrolled_at"
+    }
+}
+
 struct APIValidationError: Decodable {
     struct Detail: Decodable {
         let msg: String
@@ -491,6 +507,10 @@ final class APIClient {
         }
         let response: FlashcardHistoryResponse = try await get(path: "flashcards/history", token: token)
         return response.items
+    }
+
+    func getStudentProfile() async throws -> StudentProfileResponse {
+        try await get(path: "students/me/profile")
     }
 
     /// Validates the stored token against the server. Returns nil for a missing/invalid/expired token

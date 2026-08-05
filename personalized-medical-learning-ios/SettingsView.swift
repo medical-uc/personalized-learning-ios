@@ -10,6 +10,7 @@ struct SettingsView: View {
 
     @State private var isLoggingOut = false
     @State private var errorMessage: String?
+    @State private var profile: StudentProfileResponse?
 
     var body: some View {
         ScrollView {
@@ -19,12 +20,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Account").font(.headline)
 
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Student ID").font(.caption2).foregroundStyle(.secondary)
-                            Text(SessionManager.studentId ?? "—").font(.subheadline.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let profile {
+                            profileRow(label: "Full Name", value: profile.fullName)
+                            profileRow(label: "Student Number", value: profile.studentNumber)
+                            profileRow(label: "Academic Year", value: "Year \(profile.academicYear)")
+                        } else {
+                            profileRow(label: "Student ID", value: SessionManager.studentId ?? "—")
                         }
-                        Spacer()
                     }
                     .padding(16)
                     .background(Color.white)
@@ -60,6 +63,16 @@ struct SettingsView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .task {
+            profile = try? await APIClient.shared.getStudentProfile()
+        }
+    }
+
+    private func profileRow(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(value).font(.subheadline.weight(.semibold))
+        }
     }
 
     private var header: some View {
