@@ -16,10 +16,10 @@ struct HistoryEntry: Identifiable {
     let startedAt: Date
 }
 
-struct HistorySection: Identifiable {
+struct HistorySection<Entry: Identifiable>: Identifiable {
     let id: String
     let title: String
-    let entries: [HistoryEntry]
+    let entries: [Entry]
 }
 
 private let historyTints: [Color] = [.red, .orange, .pink, .blue, .teal, .purple, .green, .indigo]
@@ -52,34 +52,93 @@ extension HistoryEntry {
     }
 }
 
+struct FlashcardHistoryEntry: Identifiable {
+    let id: String
+    let front: String
+    let topicPath: String
+    let rating: FlashcardRating
+    let ts: Date
+    let timeLabel: String
+
+    init(item: FlashcardHistoryItem) {
+        self.id = item.eventId
+        self.front = item.front
+        self.topicPath = item.topicPath
+        self.rating = item.rating
+        self.ts = item.ts
+        self.timeLabel = Self.timeLabelText(date: item.ts)
+    }
+
+    private static func timeLabelText(date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+}
+
+extension FlashcardRating {
+    var tint: Color {
+        switch self {
+        case .again: return .red
+        case .hard: return .orange
+        case .good: return .blue
+        case .easy: return .green
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .again: return "Again"
+        case .hard: return "Hard"
+        case .good: return "Good"
+        case .easy: return "Easy"
+        }
+    }
+}
+
 enum HistoryGrouping {
-    static func sections(from items: [HistoryItem]) -> [HistorySection] {
+    static func dayTitle(for date: Date) -> String {
         let calendar = Calendar.current
-        let now = Date()
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: date)
+    }
 
-        var today: [HistoryEntry] = []
-        var yesterday: [HistoryEntry] = []
-        var thisWeek: [HistoryEntry] = []
-        var older: [HistoryEntry] = []
+    static func sections<Entry: Identifiable>(
+        from entries: [Entry],
+        date: (Entry) -> Date
+    ) -> [HistorySection<Entry>] {
+        let calendar = Calendar.current
+        let sorted = entries.sorted { date($0) > date($1) }
 
-        for item in items.sorted(by: { $0.startedAt > $1.startedAt }) {
-            let entry = HistoryEntry(item: item)
-            if calendar.isDateInToday(item.startedAt) {
-                today.append(entry)
-            } else if calendar.isDateInYesterday(item.startedAt) {
-                yesterday.append(entry)
-            } else if let weekAgo = calendar.date(byAdding: .day, value: -7, to: now), item.startedAt >= weekAgo {
-                thisWeek.append(entry)
-            } else {
-                older.append(entry)
+        var order: [Date] = []
+        var buckets: [Date: [Entry]] = [:]
+
+        for entry in sorted {
+            let day = calendar.startOfDay(for: date(entry))
+            if buckets[day] == nil {
+                buckets[day] = []
+                order.append(day)
             }
+            buckets[day]?.append(entry)
         }
 
-        var sections: [HistorySection] = []
-        if !today.isEmpty { sections.append(.init(id: "today", title: "Today", entries: today)) }
-        if !yesterday.isEmpty { sections.append(.init(id: "yesterday", title: "Yesterday", entries: yesterday)) }
-        if !thisWeek.isEmpty { sections.append(.init(id: "thisWeek", title: "This Week", entries: thisWeek)) }
-        if !older.isEmpty { sections.append(.init(id: "older", title: "Older", entries: older)) }
-        return sections
+        return order.map { day in
+            HistorySection(
+                id: ISO8601DateFormatter().string(from: day),
+                title: dayTitle(for: day),
+                entries: buckets[day] ?? []
+            )
+        }
+    }
+
+    static func sections(from items: [HistoryItem]) -> [HistorySection<HistoryEntry>] {
+        sections(from: items.map(HistoryEntry.init(item:)), date: \.startedAt)
+    }
+
+    static func sections(from items: [FlashcardHistoryItem]) -> [HistorySection<FlashcardHistoryEntry>] {
+        sections(from: items.map(FlashcardHistoryEntry.init(item:)), date: \.ts)
     }
 }

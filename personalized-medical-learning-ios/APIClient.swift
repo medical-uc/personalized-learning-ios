@@ -224,7 +224,7 @@ struct FlashcardRevealResponse: Decodable {
     let explanation: String
 }
 
-enum FlashcardRating: String, Encodable {
+enum FlashcardRating: String, Codable {
     case again, hard, good, easy
 }
 
@@ -266,6 +266,28 @@ struct DueFlashcardResponse: Decodable {
     let items: [DueFlashcardItem]
 }
 
+struct FlashcardHistoryItem: Decodable {
+    let eventId: String
+    let questionUid: String
+    let front: String
+    let topicPath: String
+    let rating: FlashcardRating
+    let ts: Date
+
+    enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
+        case questionUid = "question_uid"
+        case front
+        case topicPath = "topic_path"
+        case rating
+        case ts
+    }
+}
+
+struct FlashcardHistoryResponse: Decodable {
+    let items: [FlashcardHistoryItem]
+}
+
 enum APIError: LocalizedError {
     case server(String)
     case decoding
@@ -297,12 +319,16 @@ final class APIClient {
         fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let whole = ISO8601DateFormatter()
         whole.formatOptions = [.withInternetDateTime]
+        let noTimeZone = DateFormatter()
+        noTimeZone.calendar = Calendar(identifier: .iso8601)
+        noTimeZone.timeZone = TimeZone(identifier: "UTC")
+        noTimeZone.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let raw = try container.decode(String.self)
-            if let date = fractional.date(from: raw) ?? whole.date(from: raw) {
+            if let date = fractional.date(from: raw) ?? whole.date(from: raw) ?? noTimeZone.date(from: raw) {
                 return date
             }
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date: \(raw)")
@@ -440,6 +466,14 @@ final class APIClient {
             throw APIError.server("You must be signed in to view review items.")
         }
         let response: DueFlashcardResponse = try await get(path: "flashcards/review/due", token: token)
+        return response.items
+    }
+
+    func getFlashcardHistory() async throws -> [FlashcardHistoryItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view flashcard history.")
+        }
+        let response: FlashcardHistoryResponse = try await get(path: "flashcards/history", token: token)
         return response.items
     }
 
