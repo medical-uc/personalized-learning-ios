@@ -6,13 +6,25 @@
 import SwiftUI
 
 struct QuizSetupView: View {
+    /// Pre-selects a topic and jumps straight to the Settings step — used by
+    /// "Practice Now" on the dashboard's Focus Areas card, which already knows the
+    /// topic and just needs the learner to confirm quiz settings before starting.
+    var preselectedTopicPath: String?
     var onBack: () -> Void = {}
     var onStart: (QuizTopic, QuizSettings) -> Void = { _, _ in }
 
     @StateObject private var viewModel = QuizSetupViewModel()
-    @State private var currentStep: QuizSetupStep = .topics
+    @State private var currentStep: QuizSetupStep
     @State private var selectedTopicID: String?
     @State private var settings = QuizSettings()
+
+    init(preselectedTopicPath: String? = nil, onBack: @escaping () -> Void = {}, onStart: @escaping (QuizTopic, QuizSettings) -> Void = { _, _ in }) {
+        self.preselectedTopicPath = preselectedTopicPath
+        self.onBack = onBack
+        self.onStart = onStart
+        _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .settings)
+        _selectedTopicID = State(initialValue: preselectedTopicPath)
+    }
 
     private var selectedTopic: QuizTopic? {
         viewModel.topics.first { $0.id == selectedTopicID }

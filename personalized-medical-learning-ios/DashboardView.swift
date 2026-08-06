@@ -25,18 +25,10 @@ struct DashboardView: View {
                     )
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 20) {
-                        DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
-                            .frame(maxWidth: .infinity)
-                        FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
-                            .frame(maxWidth: .infinity)
-                    }
-
-                    VStack(alignment: .leading, spacing: 20) {
-                        DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
-                        FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
-                    }
+                DashboardTopCardsLayout {
+                    DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
+                } focusAreas: {
+                    FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
                 }
             }
             .padding(.horizontal, 24)
@@ -46,6 +38,33 @@ struct DashboardView: View {
         .task {
             await streakViewModel.loadStreak()
             await nudgeViewModel.loadNudge()
+        }
+    }
+}
+
+/// Side-by-side on wide screens, stacked on narrow — a single Layout instead of
+/// ViewThatFits so each card is instantiated exactly once. ViewThatFits duplicates its
+/// child views to measure every branch, which double-created FocusAreasCard (and its
+/// Practice Now closures) and made taps land on a stale, already-discarded instance.
+private struct DashboardTopCardsLayout<DayStreak: View, FocusAreas: View>: View {
+    @ViewBuilder let dayStreak: DayStreak
+    @ViewBuilder let focusAreas: FocusAreas
+
+    init(@ViewBuilder dayStreak: () -> DayStreak, @ViewBuilder focusAreas: () -> FocusAreas) {
+        self.dayStreak = dayStreak()
+        self.focusAreas = focusAreas()
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 20) {
+                dayStreak.frame(maxWidth: .infinity)
+                focusAreas.frame(maxWidth: .infinity)
+            }
+            VStack(alignment: .leading, spacing: 20) {
+                dayStreak
+                focusAreas
+            }
         }
     }
 }
@@ -173,7 +192,7 @@ private struct FocusAreasCard: View {
                     Spacer()
 
                     Button(action: onViewAll) {
-                        Text("View All Weak Areas")
+                        Text("View All")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(Theme.dark)
                             .padding(.horizontal, 12)

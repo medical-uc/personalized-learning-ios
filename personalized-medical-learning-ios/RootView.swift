@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
     @State private var flashcardTopicPath: String?
+    @State private var preselectedSetupTopicPath: String?
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
@@ -33,8 +34,7 @@ struct RootView: View {
                 case .dashboard:
                     DashboardView(
                         onPracticeTopic: { topic in
-                            activeTopicPath = topic.path
-                            activeQuestionCount = 10
+                            preselectedSetupTopicPath = topic.path
                             selection = .quiz
                         },
                         onViewAllWeakAreas: { selection = .mastery }
@@ -52,8 +52,13 @@ struct RootView: View {
                         )
                     } else {
                         QuizSetupView(
-                            onBack: { selection = .dashboard },
+                            preselectedTopicPath: preselectedSetupTopicPath,
+                            onBack: {
+                                preselectedSetupTopicPath = nil
+                                selection = .dashboard
+                            },
                             onStart: { topic, settings in
+                                preselectedSetupTopicPath = nil
                                 activeTopicPath = topic.path
                                 activeQuestionCount = settings.questionCount
                             }
