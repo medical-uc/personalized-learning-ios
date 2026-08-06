@@ -12,6 +12,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     case flashcards = "Flashcards"
     case bookmarks = "Bookmarks"
     case history = "History"
+    case mastery = "Mastery"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -24,6 +25,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .flashcards: return "rectangle.stack"
         case .bookmarks: return "bookmark"
         case .history: return "clock"
+        case .mastery: return "chart.bar.fill"
         case .settings: return "gearshape"
         }
     }

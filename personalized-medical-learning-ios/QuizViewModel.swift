@@ -137,6 +137,7 @@ final class QuizViewModel: ObservableObject {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].correctIndex = result.correctIndex
             questions[index].explanationBody = result.explanation
+            BKTStore.record(topicPath: questions[index].topicPath, correct: result.correct)
         } catch {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].selectedIndex = nil

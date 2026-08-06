@@ -165,6 +165,18 @@ private struct ChooseTopicsStepView: View {
         }
     }
 
+    /// Weakest-mastery topics still present in this session's topic list, capped at 3 —
+    /// nudges the learner toward BKTStore's lowest p_know entries instead of leaving
+    /// topic choice unguided.
+    private var recommendedTopics: [(topic: QuizTopic, entry: MasteryEntry)] {
+        guard searchText.isEmpty else { return [] }
+        let topicsByPath = Dictionary(uniqueKeysWithValues: topics.map { ($0.path, $0) })
+        return BKTStore.allEntries()
+            .compactMap { entry in topicsByPath[entry.topicPath].map { (topic: $0, entry: entry) } }
+            .prefix(3)
+            .map { $0 }
+    }
+
     private var filteredTopics: [QuizTopic]? {
         guard !searchText.isEmpty else { return nil }
         return topics.filter {
@@ -190,6 +202,15 @@ private struct ChooseTopicsStepView: View {
             .background(Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.06)))
+
+            if !recommendedTopics.isEmpty {
+                RecommendedTopicsSection(
+                    entries: recommendedTopics,
+                    selectedTopicID: selectedTopicID
+                ) { topic in
+                    selectedTopicID = topic.id
+                }
+            }
 
             if isLoading {
                 ProgressView("Loading topics…")
@@ -267,6 +288,93 @@ private struct ChooseTopicsStepView: View {
         .padding(20)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+private struct RecommendedTopicsSection: View {
+    let entries: [(topic: QuizTopic, entry: MasteryEntry)]
+    let selectedTopicID: String?
+    let onSelect: (QuizTopic) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text("Recommended for You")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.dark)
+            }
+            Text("Your weakest topics based on quiz performance.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 8) {
+                ForEach(entries, id: \.topic.id) { pair in
+                    RecommendedTopicRow(
+                        topic: pair.topic,
+                        entry: pair.entry,
+                        isSelected: selectedTopicID == pair.topic.id
+                    ) {
+                        onSelect(pair.topic)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.orange.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.orange.opacity(0.2)))
+    }
+}
+
+private struct RecommendedTopicRow: View {
+    let topic: QuizTopic
+    let entry: MasteryEntry
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(topic.tint.opacity(0.15)).frame(width: 40, height: 40)
+                    Image(systemName: topic.icon).foregroundStyle(topic.tint)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                    Text(topic.subject).font(.caption2).foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(entry.percent)% mastery")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(entry.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(entry.tint.opacity(0.12))
+                    .clipShape(Capsule())
+
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Theme.dark : Color.white)
+                        .overlay(Circle().stroke(Color.black.opacity(0.15), lineWidth: isSelected ? 0 : 1.5))
+                        .frame(width: 24, height: 24)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -68,6 +68,8 @@ struct RootView: View {
                     BookmarkView(onBack: { selection = .dashboard })
                 case .history:
                     HistoryView(onBack: { selection = .dashboard })
+                case .mastery:
+                    MasteryView(onBack: { selection = .dashboard })
                 case .settings:
                     SettingsView(onLogOut: onLogOut)
                 default:

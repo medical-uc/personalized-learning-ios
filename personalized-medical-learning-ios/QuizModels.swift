@@ -35,6 +35,7 @@ struct QuizQuestion: Identifiable {
     let id: String
     let index: Int
     let subject: String
+    let topicTag: [String]
     let difficulty: Difficulty
     let prompt: String
     let options: [QuizOption]
@@ -45,6 +46,13 @@ struct QuizQuestion: Identifiable {
     var explanationBody: String
     let reference: String
     var isBookmarked: Bool
+
+    /// Leaf topic_path for this question's BKT entry — same " > "-joined shape
+    /// MasteryEntry.topicPath already uses, so BKTStore keys line up with zero
+    /// translation. Falls back to `subject` alone if topicTag is somehow empty.
+    var topicPath: String {
+        topicTag.isEmpty ? subject : topicTag.joined(separator: " > ")
+    }
 
     var state: QuestionState {
         guard let correctIndex, selectedIndex != nil else { return .unanswered }
@@ -67,6 +75,7 @@ extension QuizQuestion {
         self.id = questionOut.uid
         self.index = index
         self.subject = questionOut.topicTag.first ?? "General"
+        self.topicTag = questionOut.topicTag
         self.difficulty = Difficulty(serverLevel: questionOut.difficulty)
         self.prompt = questionOut.stem
         self.options = questionOut.options.map { option in
@@ -126,6 +135,7 @@ enum QuizData {
         id: "sample",
         index: 3,
         subject: "Pharmacology",
+        topicTag: ["Pharmacology", "Beta-blockers"],
         difficulty: .medium,
         prompt: "Which of the following mechanisms is the primary reason for the therapeutic effect of beta-blockers in patients with hypertension?",
         options: [
