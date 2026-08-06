@@ -6,24 +6,36 @@
 import SwiftUI
 
 struct DashboardView: View {
+    var onPracticeTopic: (QuizTopic) -> Void = { _ in }
+    var onViewAllWeakAreas: () -> Void = {}
+
     @StateObject private var streakViewModel = StreakViewModel()
+    @StateObject private var nudgeViewModel = NudgeViewModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 TopBarView()
 
+                if nudgeViewModel.totalDueCount > 0 {
+                    DueForReviewCard(
+                        quizDueCount: nudgeViewModel.quizDueCount,
+                        flashcardDueCount: nudgeViewModel.flashcardDueCount,
+                        totalDueCount: nudgeViewModel.totalDueCount
+                    )
+                }
+
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 20) {
                         DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
                             .frame(maxWidth: .infinity)
-                        FocusAreasCard()
+                        FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
                             .frame(maxWidth: .infinity)
                     }
 
                     VStack(alignment: .leading, spacing: 20) {
                         DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
-                        FocusAreasCard()
+                        FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
                     }
                 }
             }
@@ -33,7 +45,47 @@ struct DashboardView: View {
         .background(Theme.bg)
         .task {
             await streakViewModel.loadStreak()
+            await nudgeViewModel.loadNudge()
         }
+    }
+}
+
+private struct DueForReviewCard: View {
+    let quizDueCount: Int
+    let flashcardDueCount: Int
+    let totalDueCount: Int
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if quizDueCount > 0 { parts.append("\(quizDueCount) quiz question\(quizDueCount == 1 ? "" : "s")") }
+        if flashcardDueCount > 0 { parts.append("\(flashcardDueCount) flashcard\(flashcardDueCount == 1 ? "" : "s")") }
+        return parts.joined(separator: " and ") + " due for review."
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "arrow.clockwise")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 18, weight: .semibold))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(totalDueCount) due for review")
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
 
@@ -98,6 +150,9 @@ private struct DayStreakCard: View {
 }
 
 private struct FocusAreasCard: View {
+    var onPracticeTopic: (QuizTopic) -> Void
+    var onViewAll: () -> Void
+
     /// Below-mastery topics only (< 70%) — matches the quiz setup recommendation bar,
     /// so this card and "Recommended for You" always agree on what still needs work.
     private var entries: [MasteryEntry] {
@@ -106,12 +161,40 @@ private struct FocusAreasCard: View {
 
     var body: some View {
         if !entries.isEmpty {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Focus Areas")
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Areas to Improve").font(.headline)
+                        Text("Topics that need more attention")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(action: onViewAll) {
+                        Text("View All Weak Areas")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Theme.dark)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Theme.bg)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 VStack(spacing: 10) {
                     ForEach(entries) { entry in
-                        FocusAreaRow(entry: entry)
+                        FocusAreaRow(entry: entry) {
+                            onPracticeTopic(QuizTopic(
+                                path: entry.topicPath,
+                                subject: entry.subjectName,
+                                name: entry.topicName,
+                                icon: entry.subjectIcon,
+                                tint: entry.subjectIconTint
+                            ))
+                        }
                     }
                 }
             }
@@ -124,29 +207,46 @@ private struct FocusAreasCard: View {
 
 private struct FocusAreaRow: View {
     let entry: MasteryEntry
+    var onPractice: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(entry.subjectIconTint.opacity(0.15)).frame(width: 44, height: 44)
+                Image(systemName: entry.subjectIcon).foregroundStyle(entry.subjectIconTint)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(entry.topicName)
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 Text(entry.subjectName)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            }
 
-            Spacer(minLength: 8)
+                ProgressView(value: Double(entry.percent), total: 100)
+                    .tint(entry.tint)
+            }
 
             Text("\(entry.percent)%")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(entry.tint)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(entry.tint.opacity(0.12))
-                .clipShape(Capsule())
+                .foregroundStyle(.primary)
+
+            Button(action: onPractice) {
+                Text("Practice Now")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.dark)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.bg)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
         }
+        .padding(12)
+        .background(Theme.bg.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 

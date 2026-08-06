@@ -31,7 +31,14 @@ struct RootView: View {
             Group {
                 switch selection {
                 case .dashboard:
-                    DashboardView()
+                    DashboardView(
+                        onPracticeTopic: { topic in
+                            activeTopicPath = topic.path
+                            activeQuestionCount = 10
+                            selection = .quiz
+                        },
+                        onViewAllWeakAreas: { selection = .mastery }
+                    )
                 case .quiz:
                     if let activeTopicPath {
                         QuizView(

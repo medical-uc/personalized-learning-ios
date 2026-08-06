@@ -85,6 +85,36 @@ struct StreakResponse: Decodable {
     }
 }
 
+enum NudgeSource: String, Decodable {
+    case quiz, flashcard
+}
+
+struct NudgePreviewItem: Decodable {
+    let source: NudgeSource
+    let questionUid: String
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case source
+        case questionUid = "question_uid"
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct NudgeResponse: Decodable {
+    let quizDueCount: Int
+    let flashcardDueCount: Int
+    let totalDueCount: Int
+    let soonestDue: NudgePreviewItem?
+
+    enum CodingKeys: String, CodingKey {
+        case quizDueCount = "quiz_due_count"
+        case flashcardDueCount = "flashcard_due_count"
+        case totalDueCount = "total_due_count"
+        case soonestDue = "soonest_due"
+    }
+}
+
 struct APIValidationError: Decodable {
     struct Detail: Decodable {
         let msg: String
@@ -528,6 +558,13 @@ final class APIClient {
             throw APIError.server("You must be signed in to view your streak.")
         }
         return try await get(path: "students/me/streak", token: token)
+    }
+
+    func getNudge() async throws -> NudgeResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view your review nudge.")
+        }
+        return try await get(path: "students/me/nudge", token: token)
     }
 
     /// Validates the stored token against the server. Returns nil for a missing/invalid/expired token

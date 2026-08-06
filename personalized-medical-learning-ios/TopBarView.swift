@@ -14,14 +14,6 @@ struct TopBarView: View {
                     .foregroundStyle(.secondary)
                 Text(SessionManager.fullName ?? "Student")
                     .font(.title.bold())
-                Text("Cardiology Department - 3rd floor")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Theme.bg)
-                    .clipShape(Capsule())
-                    .padding(.top, 4)
             }
             .fixedSize(horizontal: false, vertical: true)
 
