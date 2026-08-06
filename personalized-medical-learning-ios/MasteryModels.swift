@@ -30,12 +30,3 @@ struct MasteryEntry: Identifiable {
         return parts.count > 1 ? parts.first ?? topicPath : topicPath
     }
 }
-
-extension MasteryEntry {
-    init(item: MasteryItem) {
-        id = item.topicPath
-        topicPath = item.topicPath
-        pKnow = item.pKnow
-        updatedAt = item.updatedAt
-    }
-}

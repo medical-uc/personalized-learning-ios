@@ -231,22 +231,6 @@ struct DueReviewResponse: Decodable {
     let items: [DueReviewItem]
 }
 
-struct MasteryItem: Decodable {
-    let topicPath: String
-    let pKnow: Double
-    let updatedAt: Date
-
-    enum CodingKeys: String, CodingKey {
-        case topicPath = "topic_path"
-        case pKnow = "p_know"
-        case updatedAt = "updated_at"
-    }
-}
-
-struct MasteryResponse: Decodable {
-    let items: [MasteryItem]
-}
-
 struct FlashcardOut: Decodable {
     let uid: String
     let front: String
@@ -486,14 +470,6 @@ final class APIClient {
             throw APIError.server("You must be signed in to view review items.")
         }
         let response: DueReviewResponse = try await get(path: "quiz/review/due", token: token)
-        return response.items
-    }
-
-    func getMastery() async throws -> [MasteryItem] {
-        guard let token = SessionManager.token else {
-            throw APIError.server("You must be signed in to view mastery.")
-        }
-        let response: MasteryResponse = try await get(path: "quiz/mastery", token: token)
         return response.items
     }
 
