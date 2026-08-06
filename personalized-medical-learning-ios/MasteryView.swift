@@ -51,7 +51,7 @@ struct MasteryView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Mastery").font(.largeTitle.bold())
-            Text("Your weakest topics first, based on quiz performance.")
+            Text("Areas to focus on first, based on your quiz performance.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

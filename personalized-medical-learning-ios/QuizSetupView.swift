@@ -167,11 +167,13 @@ private struct ChooseTopicsStepView: View {
 
     /// Weakest-mastery topics still present in this session's topic list, capped at 3 —
     /// nudges the learner toward BKTStore's lowest p_know entries instead of leaving
-    /// topic choice unguided.
+    /// topic choice unguided. Only surfaces topics below the 70% mastery bar; anything
+    /// at or above that is already considered mastered and doesn't need recommending.
     private var recommendedTopics: [(topic: QuizTopic, entry: MasteryEntry)] {
         guard searchText.isEmpty else { return [] }
         let topicsByPath = Dictionary(uniqueKeysWithValues: topics.map { ($0.path, $0) })
         return BKTStore.allEntries()
+            .filter { $0.percent < 70 }
             .compactMap { entry in topicsByPath[entry.topicPath].map { (topic: $0, entry: entry) } }
             .prefix(3)
             .map { $0 }
@@ -306,7 +308,7 @@ private struct RecommendedTopicsSection: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(Theme.dark)
             }
-            Text("Your weakest topics based on quiz performance.")
+            Text("A few areas worth another look, based on your quiz performance.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

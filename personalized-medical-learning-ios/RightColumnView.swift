@@ -8,9 +8,64 @@ import SwiftUI
 struct RightColumnView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            if !WeakTopicsCard.entries.isEmpty {
+                WeakTopicsCard()
+            }
             TopPerformersCard()
             QuickActionsCard()
             OnFireCard()
+        }
+    }
+}
+
+private struct WeakTopicsCard: View {
+    /// Below-mastery topics only (< 70%) — matches the quiz setup recommendation bar,
+    /// so this card and "Recommended for You" always agree on what still needs work.
+    static var entries: [MasteryEntry] {
+        Array(BKTStore.allEntries().filter { $0.percent < 70 }.prefix(3))
+    }
+    private var entries: [MasteryEntry] { Self.entries }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Focus Areas")
+
+            VStack(spacing: 10) {
+                ForEach(entries) { entry in
+                    WeakTopicRow(entry: entry)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+private struct WeakTopicRow: View {
+    let entry: MasteryEntry
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.topicName)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Text(entry.subjectName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            Text("\(entry.percent)%")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(entry.tint)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(entry.tint.opacity(0.12))
+                .clipShape(Capsule())
         }
     }
 }

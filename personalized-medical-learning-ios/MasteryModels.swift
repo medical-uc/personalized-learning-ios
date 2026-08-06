@@ -14,8 +14,8 @@ struct MasteryEntry: Identifiable {
     var percent: Int { Int((pKnow * 100).rounded()) }
 
     var tint: Color {
-        if pKnow >= 0.7 { return .green }
-        if pKnow >= 0.4 { return .orange }
+        if percent > 70 { return .green }
+        if percent >= 65 { return .yellow }
         return .red
     }
 
