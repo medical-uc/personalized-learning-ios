@@ -75,6 +75,16 @@ struct StudentProfileResponse: Decodable {
     }
 }
 
+struct StreakResponse: Decodable {
+    let currentStreak: Int
+    let weekActivity: [Bool]
+
+    enum CodingKeys: String, CodingKey {
+        case currentStreak = "current_streak"
+        case weekActivity = "week_activity"
+    }
+}
+
 struct APIValidationError: Decodable {
     struct Detail: Decodable {
         let msg: String
@@ -511,6 +521,13 @@ final class APIClient {
 
     func getStudentProfile() async throws -> StudentProfileResponse {
         try await get(path: "students/me/profile")
+    }
+
+    func getStreak() async throws -> StreakResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view your streak.")
+        }
+        return try await get(path: "students/me/streak", token: token)
     }
 
     /// Validates the stored token against the server. Returns nil for a missing/invalid/expired token
