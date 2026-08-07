@@ -375,7 +375,9 @@ extension Notification.Name {
 }
 
 enum APIConfig {
-    static let baseURL = URL(string: "http://10.67.54.37:8000")!
+    /// Bonjour hostname instead of a raw LAN IP — survives DHCP reassigning the
+    /// backend Mac's address (e.g. after wifi reconnect), no source edit needed.
+    static let baseURL = URL(string: "http://Mikel-MacBook-Pro.local:8000")!
 }
 
 final class APIClient {
