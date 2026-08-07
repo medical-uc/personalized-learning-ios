@@ -37,7 +37,6 @@ struct QuizSubjectGroup: Identifiable {
 
 enum QuizSetupStep: Int, CaseIterable, Identifiable {
     case topics
-    case settings
     case start
 
     var id: Int { rawValue }
@@ -45,7 +44,6 @@ enum QuizSetupStep: Int, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .topics: return "Choose Topic"
-        case .settings: return "Quiz Settings"
         case .start: return "Quiz Preview"
         }
     }
@@ -53,7 +51,6 @@ enum QuizSetupStep: Int, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .topics: return "Select the topic you want to be tested on."
-        case .settings: return "Set the preferences for your quiz."
         case .start: return "Review your quiz before starting."
         }
     }
@@ -64,9 +61,4 @@ struct QuizSettings {
     var secondsPerQuestion: Int = 60
     var isReviewModeEnabled: Bool = true
     var questionCount: Int = 10
-}
-
-enum QuizSetupOptions {
-    static let timerOptions = [15, 30, 45, 60, 90, 120]
-    static let questionCountOptions = [5, 10, 15, 20, 25]
 }

@@ -6,9 +6,9 @@
 import SwiftUI
 
 struct QuizSetupView: View {
-    /// Pre-selects a topic and jumps straight to the Settings step — used by
+    /// Pre-selects a topic and jumps straight to the Preview step — used by
     /// "Practice Now" on the dashboard's Focus Areas card, which already knows the
-    /// topic and just needs the learner to confirm quiz settings before starting.
+    /// topic and just needs the learner to confirm before starting.
     var preselectedTopicPath: String?
     var onBack: () -> Void = {}
     var onStart: (QuizTopic, QuizSettings) -> Void = { _, _ in }
@@ -22,7 +22,7 @@ struct QuizSetupView: View {
         self.preselectedTopicPath = preselectedTopicPath
         self.onBack = onBack
         self.onStart = onStart
-        _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .settings)
+        _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .start)
         _selectedTopicID = State(initialValue: preselectedTopicPath)
     }
 
@@ -34,10 +34,10 @@ struct QuizSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Create a Quiz")
+                    Text(currentStep.title)
                         .font(.largeTitle.bold())
                         .foregroundStyle(Theme.dark)
-                    Text("Customize your quiz to focus on what matters most to you.")
+                    Text(currentStep.subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -69,19 +69,13 @@ struct QuizSetupView: View {
                 errorMessage: viewModel.errorMessage,
                 selectedTopicID: $selectedTopicID,
                 onRetry: { Task { await viewModel.loadTopics() } },
-                onNext: { currentStep = .settings }
-            )
-        case .settings:
-            QuizSettingsStepView(
-                settings: $settings,
-                onBack: { currentStep = .topics },
                 onNext: { currentStep = .start }
             )
         case .start:
             if let selectedTopic {
                 QuizPreviewStepView(
                     topic: selectedTopic,
-                    settings: settings,
+                    settings: $settings,
                     onEditTopics: { currentStep = .topics },
                     onBegin: { onStart(selectedTopic, settings) }
                 )
@@ -104,13 +98,7 @@ private struct StepBreadcrumbBar: View {
                 ) {
                     onTap(step)
                 }
-
-                if step != QuizSetupStep.allCases.last {
-                    Rectangle()
-                        .fill(Color.black)
-                        .frame(height: 1)
-                        .frame(maxWidth: .infinity)
-                }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(20)
@@ -151,8 +139,9 @@ private struct BreadcrumbItem: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Spacer(minLength: 0)
             }
-            .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(.plain)
         .disabled(!isComplete)
@@ -201,11 +190,6 @@ private struct ChooseTopicsStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Choose a Topic").font(.title3.bold()).foregroundStyle(Theme.dark)
-            Text("Select the topic you want to be tested on.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search topics or keywords...", text: $searchText)
@@ -496,110 +480,28 @@ private struct TopicRow: View {
     }
 }
 
-private struct QuizSettingsStepView: View {
-    @Binding var settings: QuizSettings
-    var onBack: () -> Void
-    var onNext: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Quiz Settings").font(.title3.bold()).foregroundStyle(Theme.dark)
-            Text("Set the preferences for your quiz.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Divider()
-
-            SettingRow(title: "Number of Questions", subtitle: "How many questions to include") {
-                Menu {
-                    ForEach(QuizSetupOptions.questionCountOptions, id: \.self) { count in
-                        Button("\(count) questions") { settings.questionCount = count }
-                    }
-                } label: {
-                    PickerLabel(text: "\(settings.questionCount)")
-                }
-            }
-
-            Divider()
-
-            SettingRow(title: "Timer", subtitle: "Add time limit per question") {
-                HStack(spacing: 10) {
-                    if settings.isTimerEnabled {
-                        Menu {
-                            ForEach(QuizSetupOptions.timerOptions, id: \.self) { seconds in
-                                Button("\(seconds) sec") { settings.secondsPerQuestion = seconds }
-                            }
-                        } label: {
-                            PickerLabel(text: "\(settings.secondsPerQuestion) sec")
-                        }
-                    }
-                    Toggle("", isOn: $settings.isTimerEnabled)
-                        .labelsHidden()
-                        .tint(Theme.dark)
-                }
-            }
-
-            Divider()
-
-            SettingRow(title: "Review Mode", subtitle: "See explanations after each question") {
-                Toggle("", isOn: $settings.isReviewModeEnabled)
-                    .labelsHidden()
-                    .tint(Theme.dark)
-            }
-
-            HStack {
-                Button(action: onBack) {
-                    Text("Back")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.dark)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.white)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.12)))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button(action: onNext) {
-                    HStack(spacing: 6) {
-                        Text("Next")
-                        Image(systemName: "chevron.right")
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Theme.dark)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(20)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-}
-
 private struct QuizPreviewStepView: View {
     let topic: QuizTopic
-    let settings: QuizSettings
+    @Binding var settings: QuizSettings
     var onEditTopics: () -> Void
     var onBegin: () -> Void
 
+    /// Total quiz time = per-question timer × question count, now that both are fixed
+    /// defaults (60s, 10 questions) with no settings UI to override them.
+    private var totalTimeText: String {
+        guard settings.isTimerEnabled else { return "Off" }
+        let totalSeconds = settings.secondsPerQuestion * settings.questionCount
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return seconds == 0 ? "\(minutes) min" : "\(minutes)m \(seconds)s"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Quiz Preview").font(.title3.bold()).foregroundStyle(Theme.dark)
-            Text("Review your quiz before starting.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
             HStack(spacing: 0) {
                 PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: topic.name, label: "Topic")
                 PreviewStatTile(icon: "list.number", tint: .purple, value: "\(settings.questionCount)", label: "Questions")
-                PreviewStatTile(icon: "clock.fill", tint: .blue, value: settings.isTimerEnabled ? "\(settings.secondsPerQuestion) sec" : "Off", label: "Per Question")
+                PreviewStatTile(icon: "clock.fill", tint: .blue, value: totalTimeText, label: "Total Time")
             }
             .padding(.vertical, 4)
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
@@ -630,6 +532,14 @@ private struct QuizPreviewStepView: View {
             .padding(.vertical, 12)
             .background(Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Divider()
+
+            SettingRow(title: "Review Mode", subtitle: "See explanations after each question") {
+                Toggle("", isOn: $settings.isReviewModeEnabled)
+                    .labelsHidden()
+                    .tint(Theme.dark)
+            }
 
             Button(action: onBegin) {
                 HStack(spacing: 6) {
@@ -685,20 +595,6 @@ private struct SettingRow<Accessory: View>: View {
             Spacer()
             accessory
         }
-    }
-}
-
-private struct PickerLabel: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(text).font(.subheadline.weight(.medium)).foregroundStyle(Theme.dark)
-            Image(systemName: "chevron.down").font(.caption2).foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.12)))
     }
 }
 
