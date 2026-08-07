@@ -348,7 +348,7 @@ private struct RecommendedTopicRow: View {
 
                 Spacer()
 
-                Text("\(entry.percent)% mastery")
+                Text("\(entry.percent)% known")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(entry.tint)
                     .padding(.horizontal, 10)

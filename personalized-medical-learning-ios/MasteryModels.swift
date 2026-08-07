@@ -19,6 +19,12 @@ struct MasteryEntry: Identifiable {
         return .red
     }
 
+    var statusLabel: String {
+        if percent > 70 { return "Strong" }
+        if percent >= 65 { return "Developing" }
+        return "Needs Work"
+    }
+
     /// Deepest segment of topic_path (e.g. "ENDOCRINOLOGY > Thyroid hormone synthesis" -> "Thyroid hormone synthesis"),
     /// same leaf-vs-subject split the backend's topic_tag chain already encodes.
     var topicName: String {
