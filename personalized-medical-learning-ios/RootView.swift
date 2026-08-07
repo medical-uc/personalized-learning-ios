@@ -11,6 +11,7 @@ struct RootView: View {
     @State private var selection: SidebarItem = .dashboard
     @State private var activeTopicPath: String?
     @State private var activeQuestionCount: Int = 10
+    @State private var activeReviewModeEnabled: Bool = true
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
     @State private var flashcardTopicPath: String?
@@ -44,6 +45,7 @@ struct RootView: View {
                         QuizView(
                             topicPath: activeTopicPath,
                             questionCount: activeQuestionCount,
+                            isReviewModeEnabled: activeReviewModeEnabled,
                             onBack: {
                                 self.activeTopicPath = nil
                                 selection = .dashboard
@@ -61,6 +63,7 @@ struct RootView: View {
                                 preselectedSetupTopicPath = nil
                                 activeTopicPath = topic.path
                                 activeQuestionCount = settings.questionCount
+                                activeReviewModeEnabled = settings.isReviewModeEnabled
                             }
                         )
                     }

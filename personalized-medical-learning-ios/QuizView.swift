@@ -8,6 +8,7 @@ import SwiftUI
 struct QuizView: View {
     var topicPath: String
     var questionCount: Int?
+    var isReviewModeEnabled: Bool = true
     var onBack: () -> Void = {}
     var onProgressChange: (Bool) -> Void = { _ in }
 
@@ -16,12 +17,13 @@ struct QuizView: View {
     @State private var resultSummary: QuizResultSummary?
     @State private var showExitConfirm = false
 
-    init(topicPath: String, questionCount: Int? = nil, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
+    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
         self.topicPath = topicPath
         self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
         self.onBack = onBack
         self.onProgressChange = onProgressChange
-        _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath, questionCount: questionCount))
+        _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath, questionCount: questionCount, isReviewModeEnabled: isReviewModeEnabled))
     }
 
     var body: some View {
@@ -59,6 +61,7 @@ struct QuizView: View {
                         question: question,
                         totalQuestions: viewModel.totalQuestions,
                         isNextEnabled: confidenceSelection != nil,
+                        isReviewModeEnabled: viewModel.isReviewModeEnabled,
                         confidenceSelection: $confidenceSelection,
                         onSelectOption: { viewModel.selectOption($0, confidence: confidenceSelection) },
                         onPrevious: { viewModel.goToPrevious() },

@@ -117,6 +117,7 @@ struct QuizResultSummary {
     let incorrectCount: Int
     let unansweredCount: Int
     let elapsedSeconds: Int
+    var reviewQuestions: [QuizQuestion] = []
 
     var scorePercent: Int {
         guard totalQuestions > 0 else { return 0 }

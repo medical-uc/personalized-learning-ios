@@ -16,6 +16,7 @@ final class QuizViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     let topicPath: String
+    let isReviewModeEnabled: Bool
     private let questionCount: Int?
     private let client: APIClient
     private var timerCancellable: AnyCancellable?
@@ -23,9 +24,10 @@ final class QuizViewModel: ObservableObject {
     private var answerTimeTaken: [String: Double] = [:]
     private var sessionId: String?
 
-    init(topicPath: String, questionCount: Int? = nil, client: APIClient = .shared) {
+    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: APIClient = .shared) {
         self.topicPath = topicPath
         self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
         self.client = client
     }
 
@@ -209,7 +211,8 @@ final class QuizViewModel: ObservableObject {
             correctCount: correctCount,
             incorrectCount: incorrectCount,
             unansweredCount: unansweredCount,
-            elapsedSeconds: elapsedSeconds
+            elapsedSeconds: elapsedSeconds,
+            reviewQuestions: isReviewModeEnabled ? [] : questions
         )
     }
 

@@ -9,6 +9,7 @@ struct QuestionCardView: View {
     let question: QuizQuestion
     var totalQuestions: Int = 1
     var isNextEnabled: Bool = true
+    var isReviewModeEnabled: Bool = true
     @Binding var confidenceSelection: ConfidenceLevel?
     var onSelectOption: (Int) -> Void = { _ in }
     var onPrevious: () -> Void = {}
@@ -23,7 +24,9 @@ struct QuestionCardView: View {
             optionsList
 
             if question.selectedIndex != nil {
-                ExplanationCard(question: question)
+                if isReviewModeEnabled {
+                    ExplanationCard(question: question)
+                }
                 ConfidenceSelectorView(selection: $confidenceSelection)
             }
 
