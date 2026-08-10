@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var pendingSelection: SidebarItem?
     @State private var flashcardTopicPath: String?
     @State private var preselectedSetupTopicPath: String?
+    @State private var energyToastAmount: Int?
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
@@ -115,6 +116,42 @@ struct RootView: View {
         } message: {
             Text("Your progress on this quiz will be lost if you leave now.")
         }
+        .overlay(alignment: .top) {
+            if let energyToastAmount {
+                EnergyAwardedToast(amount: energyToastAmount)
+                    .padding(.top, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(duration: 0.35), value: energyToastAmount)
+        .onReceive(NotificationCenter.default.publisher(for: .energyAwarded)) { notification in
+            guard let amount = notification.userInfo?[EnergyAwardedKey.amount] as? Int else { return }
+            energyToastAmount = amount
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                if energyToastAmount == amount {
+                    energyToastAmount = nil
+                }
+            }
+        }
+    }
+}
+
+private struct EnergyAwardedToast: View {
+    let amount: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bolt.fill")
+                .foregroundStyle(.orange)
+            Text("+\(amount) Energy")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Theme.dark)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 }
 

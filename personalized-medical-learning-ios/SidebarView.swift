@@ -62,6 +62,8 @@ private struct SidebarRow: View {
 }
 
 private struct ProfileFooter: View {
+    @State private var energyBalance: Int?
+
     var body: some View {
         VStack(spacing: 12) {
             VStack(spacing: 8) {
@@ -83,7 +85,7 @@ private struct ProfileFooter: View {
                 HStack(spacing: 6) {
                     Image(systemName: "bolt.fill").foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("1200").font(.subheadline.bold())
+                        Text(energyBalance.map(String.init) ?? "–").font(.subheadline.bold())
                         Text("Energy Points").font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -104,6 +106,14 @@ private struct ProfileFooter: View {
             .padding(.vertical, 12)
             .background(Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .task {
+            energyBalance = try? await APIClient.shared.getEnergy().energy
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .energyAwarded)) { notification in
+            if let balance = notification.userInfo?[EnergyAwardedKey.balance] as? Int {
+                energyBalance = balance
+            }
         }
     }
 }

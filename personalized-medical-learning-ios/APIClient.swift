@@ -77,12 +77,18 @@ struct StudentProfileResponse: Decodable {
 
 struct StreakResponse: Decodable {
     let currentStreak: Int
+    let previousStreak: Int
     let weekActivity: [Bool]
 
     enum CodingKeys: String, CodingKey {
         case currentStreak = "current_streak"
+        case previousStreak = "previous_streak"
         case weekActivity = "week_activity"
     }
+}
+
+struct EnergyResponse: Decodable {
+    let energy: Int
 }
 
 enum NudgeSource: String, Decodable {
@@ -232,12 +238,16 @@ struct EndSessionResponse: Decodable {
     let questionCount: Int
     let correctCount: Int
     let durationSeconds: Int
+    let energyAwarded: Int
+    let energyBalance: Int
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case questionCount = "question_count"
         case correctCount = "correct_count"
         case durationSeconds = "duration_seconds"
+        case energyAwarded = "energy_awarded"
+        case energyBalance = "energy_balance"
     }
 }
 
@@ -333,12 +343,16 @@ struct LogFlashcardReviewResponse: Decodable {
     let streak: Int
     let intervalDays: Int
     let nextReviewAt: Date
+    let energyAwarded: Int
+    let energyBalance: Int
 
     enum CodingKeys: String, CodingKey {
         case eventId = "event_id"
         case streak
         case intervalDays = "interval_days"
         case nextReviewAt = "next_review_at"
+        case energyAwarded = "energy_awarded"
+        case energyBalance = "energy_balance"
     }
 }
 
@@ -402,6 +416,14 @@ enum APIError: LocalizedError {
 
 extension Notification.Name {
     static let sessionExpired = Notification.Name("sessionExpired")
+    static let energyAwarded = Notification.Name("energyAwarded")
+}
+
+/// userInfo payload posted alongside .energyAwarded — awarded is 0 for cancelled
+/// sessions (no notification fires there since cancelSession has no energy fields).
+enum EnergyAwardedKey {
+    static let amount = "amount"
+    static let balance = "balance"
 }
 
 enum APIConfig {
@@ -527,7 +549,9 @@ final class APIClient {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to end a quiz.")
         }
-        return try await post(path: "quiz/sessions/\(sessionId)/end", expectedStatus: 200, token: token)
+        let response: EndSessionResponse = try await post(path: "quiz/sessions/\(sessionId)/end", expectedStatus: 200, token: token)
+        postEnergyAwarded(response.energyAwarded, balance: response.energyBalance)
+        return response
     }
 
     func cancelSession(sessionId: String) async throws -> CancelSessionResponse {
@@ -565,12 +589,14 @@ final class APIClient {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to log a review.")
         }
-        return try await send(
+        let response: LogFlashcardReviewResponse = try await send(
             path: "flashcards/cards/\(uid)/log",
             body: LogFlashcardReviewRequest(rating: rating),
             expectedStatus: 200,
             token: token
         )
+        postEnergyAwarded(response.energyAwarded, balance: response.energyBalance)
+        return response
     }
 
     func getDueFlashcards() async throws -> [DueFlashcardItem] {
@@ -598,6 +624,24 @@ final class APIClient {
             throw APIError.server("You must be signed in to view your streak.")
         }
         return try await get(path: "students/me/streak", token: token)
+    }
+
+    /// Re-syncs the displayed balance (app open, another tab awarded energy, etc.) —
+    /// awards themselves arrive inline from endSession/logReview via .energyAwarded.
+    func getEnergy() async throws -> EnergyResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view your energy.")
+        }
+        return try await get(path: "students/me/energy", token: token)
+    }
+
+    private func postEnergyAwarded(_ amount: Int, balance: Int) {
+        guard amount > 0 else { return }
+        NotificationCenter.default.post(
+            name: .energyAwarded,
+            object: nil,
+            userInfo: [EnergyAwardedKey.amount: amount, EnergyAwardedKey.balance: balance]
+        )
     }
 
     func getNudge() async throws -> NudgeResponse {
