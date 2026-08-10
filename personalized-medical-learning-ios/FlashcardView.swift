@@ -12,7 +12,6 @@ struct FlashcardView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var viewModel: FlashcardViewModel
     @State private var isFlipped = false
-    @State private var showAnswerFirst = false
 
     init(topicPath: String, onBack: @escaping () -> Void = {}) {
         self.topicPath = topicPath
@@ -24,7 +23,7 @@ struct FlashcardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 FlashcardHeaderView(onBack: onBack)
-                FlashcardFilterBar(showAnswerFirst: $showAnswerFirst)
+                FlashcardFilterBar()
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -95,14 +94,9 @@ private struct FlashcardHeaderView: View {
 
     var body: some View {
         HStack {
-            Button(action: onBack) {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.left")
-                    Text("Flashcards")
-                }
+            Text("Flashcards")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.dark)
-            }
 
             Spacer()
 
@@ -145,38 +139,10 @@ private struct FlashcardHeaderView: View {
 }
 
 private struct FlashcardFilterBar: View {
-    @Binding var showAnswerFirst: Bool
-
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack {
-                filters
-                Spacer()
-                toggle
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                filters
-                toggle
-            }
-        }
-    }
-
-    private var filters: some View {
         HStack(spacing: 12) {
             FilterDropdown(title: "Cardiology")
             FilterDropdown(title: "All Topics")
-        }
-    }
-
-    private var toggle: some View {
-        HStack(spacing: 10) {
-            Text("Show Answer First")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Toggle("", isOn: $showAnswerFirst)
-                .labelsHidden()
-                .tint(Theme.dark)
         }
     }
 }
