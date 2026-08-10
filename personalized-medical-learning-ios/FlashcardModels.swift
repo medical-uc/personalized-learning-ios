@@ -16,6 +16,12 @@ struct Flashcard: Identifiable {
 
     var id: String { uid }
 
+    /// Same " > "-joined shape as MasteryEntry.topicPath / QuizQuestion.topicPath,
+    /// so BKTStore keys line up with zero translation.
+    var topicPath: String {
+        topicTag.isEmpty ? "General" : topicTag.joined(separator: " > ")
+    }
+
     init(cardOut: FlashcardOut) {
         self.uid = cardOut.uid
         self.front = cardOut.front

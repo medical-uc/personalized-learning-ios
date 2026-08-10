@@ -50,6 +50,9 @@ struct FlashcardView: View {
         .onChange(of: viewModel.currentIndex) {
             isFlipped = false
         }
+        .onDisappear {
+            viewModel.cancelSession()
+        }
     }
 }
 
@@ -225,6 +228,9 @@ private struct FlashcardMainCard: View {
                 .onTapGesture { flip() }
 
                 FlashcardRatingBar(viewModel: viewModel)
+            }
+            .onChange(of: viewModel.currentIndex) {
+                displayedFace = false
             }
         }
     }

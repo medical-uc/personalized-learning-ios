@@ -414,6 +414,60 @@ struct FlashcardHistoryResponse: Decodable {
     let items: [FlashcardHistoryItem]
 }
 
+struct StartFlashcardSessionRequest: Encodable {
+    let size: Int?
+}
+
+struct StartFlashcardSessionResponse: Decodable {
+    let sessionId: String
+    let cardUids: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case cardUids = "card_uids"
+    }
+}
+
+struct EndFlashcardSessionResponse: Decodable {
+    let sessionId: String
+    let cardCount: Int
+    let reviewedCount: Int
+    let durationSeconds: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case cardCount = "card_count"
+        case reviewedCount = "reviewed_count"
+        case durationSeconds = "duration_seconds"
+    }
+}
+
+struct FlashcardSessionHistoryItem: Decodable {
+    let sessionId: String
+    let topicPath: String?
+    let status: String
+    let cardCount: Int
+    let reviewedCount: Int
+    let durationSeconds: Int
+    let startedAt: Date
+    let endedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case topicPath = "topic_path"
+        case status
+        case cardCount = "card_count"
+        case reviewedCount = "reviewed_count"
+        case durationSeconds = "duration_seconds"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+    }
+}
+
+struct FlashcardSessionHistoryResponse: Decodable {
+    let items: [FlashcardSessionHistoryItem]
+}
+
 enum APIError: LocalizedError {
     case server(String)
     case decoding
@@ -601,6 +655,41 @@ final class APIClient {
 
     func getAllCards() async throws -> [FlashcardOut] {
         try await get(path: "flashcards/cards")
+    }
+
+    func startFlashcardSession(topicPath: String? = nil, size: Int? = nil) async throws -> StartFlashcardSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to start a flashcard session.")
+        }
+        let path = topicPath.map { "flashcards/topics/\($0)/sessions" } ?? "flashcards/sessions"
+        return try await send(
+            path: path,
+            body: StartFlashcardSessionRequest(size: size),
+            expectedStatus: 200,
+            token: token
+        )
+    }
+
+    func endFlashcardSession(sessionId: String) async throws -> EndFlashcardSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to end a flashcard session.")
+        }
+        return try await post(path: "flashcards/sessions/\(sessionId)/end", expectedStatus: 200, token: token)
+    }
+
+    func cancelFlashcardSession(sessionId: String) async throws -> EndFlashcardSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to cancel a flashcard session.")
+        }
+        return try await post(path: "flashcards/sessions/\(sessionId)/cancel", expectedStatus: 200, token: token)
+    }
+
+    func getFlashcardSessionHistory() async throws -> [FlashcardSessionHistoryItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view flashcard session history.")
+        }
+        let response: FlashcardSessionHistoryResponse = try await get(path: "flashcards/sessions/history", token: token)
+        return response.items
     }
 
     func revealCard(uid: String) async throws -> FlashcardRevealResponse {

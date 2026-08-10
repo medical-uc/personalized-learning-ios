@@ -15,6 +15,8 @@ final class FlashcardViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let client: APIClient
+    private var sessionId: String?
+    private var hasEnded = false
 
     init(client: APIClient = .shared) {
         self.client = client
@@ -30,10 +32,18 @@ final class FlashcardViewModel: ObservableObject {
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
+        hasEnded = false
 
         do {
-            let out = try await client.getAllCards()
-            cards = out.map(Flashcard.init(cardOut:))
+            async let cardsTask = client.getAllCards()
+            async let sessionTask = client.startFlashcardSession()
+            let (out, session) = try await (cardsTask, sessionTask)
+            let byUid = Dictionary(uniqueKeysWithValues: out.map { ($0.uid, $0) })
+            let ordered = session.cardUids.compactMap { byUid[$0] }
+            cards = ordered
+                .map(Flashcard.init(cardOut:))
+                .sorted { BKTStore.pKnow(for: $0.topicPath) < BKTStore.pKnow(for: $1.topicPath) }
+            sessionId = session.sessionId
             currentIndex = 0
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
@@ -63,11 +73,30 @@ final class FlashcardViewModel: ObservableObject {
         Task {
             do {
                 _ = try await client.logReview(uid: card.uid, rating: rating)
+                if index == cards.count - 1 {
+                    await finishSession()
+                }
             } catch {
                 cards[index].rating = nil
                 errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
             }
         }
+    }
+
+    func finishSession() async {
+        guard let sessionId, !hasEnded else { return }
+        hasEnded = true
+        do {
+            _ = try await client.endFlashcardSession(sessionId: sessionId)
+        } catch {
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func cancelSession() {
+        guard let sessionId, !hasEnded else { return }
+        hasEnded = true
+        Task { _ = try? await client.cancelFlashcardSession(sessionId: sessionId) }
     }
 
     func goToNext() {
