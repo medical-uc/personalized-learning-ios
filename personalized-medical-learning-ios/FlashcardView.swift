@@ -23,7 +23,9 @@ struct FlashcardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 FlashcardHeaderView(onBack: onBack)
-                FlashcardFilterBar()
+                if let card = viewModel.currentCard {
+                    FlashcardTopicLabel(topicTag: card.topicTag)
+                }
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -138,30 +140,20 @@ private struct FlashcardHeaderView: View {
     }
 }
 
-private struct FlashcardFilterBar: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            FilterDropdown(title: "Cardiology")
-            FilterDropdown(title: "All Topics")
-        }
-    }
-}
-
-private struct FilterDropdown: View {
-    let title: String
+private struct FlashcardTopicLabel: View {
+    let topicTag: [String]
 
     var body: some View {
-        Button {} label: {
-            HStack(spacing: 8) {
-                Text(title).font(.subheadline.weight(.medium))
-                Image(systemName: "chevron.down").font(.caption2)
-            }
-            .foregroundStyle(Theme.dark)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+        HStack(spacing: 8) {
+            Image(systemName: "folder")
+            Text(topicTag.joined(separator: " › "))
+                .font(.subheadline.weight(.medium))
         }
+        .foregroundStyle(Theme.dark)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
