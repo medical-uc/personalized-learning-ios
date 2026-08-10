@@ -39,6 +39,7 @@ enum ConfidenceLevel: String, CaseIterable, Identifiable {
 
 struct ConfidenceSelectorView: View {
     @Binding var selection: ConfidenceLevel?
+    var isLocked: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -49,7 +50,8 @@ struct ConfidenceSelectorView: View {
                 ForEach(ConfidenceLevel.allCases) { level in
                     ConfidenceOptionButton(
                         level: level,
-                        isSelected: selection == level
+                        isSelected: selection == level,
+                        isLocked: isLocked
                     ) {
                         selection = level
                     }
@@ -65,6 +67,7 @@ struct ConfidenceSelectorView: View {
 private struct ConfidenceOptionButton: View {
     let level: ConfidenceLevel
     let isSelected: Bool
+    let isLocked: Bool
     let onTap: () -> Void
 
     var body: some View {
@@ -81,8 +84,10 @@ private struct ConfidenceOptionButton: View {
             .padding(.vertical, 16)
             .background(isSelected ? level.tint : Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 14))
+            .opacity(isLocked && !isSelected ? 0.4 : 1)
         }
         .buttonStyle(.plain)
+        .disabled(isLocked)
     }
 }
 

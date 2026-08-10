@@ -109,18 +109,23 @@ final class QuizViewModel: ObservableObject {
         }
     }
 
+    /// Freely re-selectable until checkCurrentAnswer() locks the question — a student
+    /// can change their pick any number of times before tapping "Check Answer".
     func selectOption(_ optionIndex: Int) {
-        guard var question = currentQuestion, question.selectedIndex == nil else { return }
+        guard var question = currentQuestion, question.correctIndex == nil else { return }
         question.selectedIndex = optionIndex
         questions[currentIndex] = question
-        let questionID = question.id
 
-        answerTimeTaken[questionID] = Date().timeIntervalSince(questionShownAt ?? Date())
+        answerTimeTaken[question.id] = Date().timeIntervalSince(questionShownAt ?? Date())
         pauseTimer()
+    }
 
-        Task {
-            await checkAnswer(optionIndex: optionIndex, questionID: questionID)
-        }
+    /// Reveals correct/incorrect + explanation — called once the student taps
+    /// "Check Answer" (after picking both an option and a confidence level), not the
+    /// moment they pick an option.
+    func checkCurrentAnswer() async {
+        guard let question = currentQuestion, let selectedIndex = question.selectedIndex, question.correctIndex == nil else { return }
+        await checkAnswer(optionIndex: selectedIndex, questionID: question.id)
     }
 
     /// Logs the current question's attempt — called once the student taps Next/Finish,

@@ -8,15 +8,16 @@ import SwiftUI
 struct QuestionCardView: View {
     let question: QuizQuestion
     var totalQuestions: Int = 1
-    var isNextEnabled: Bool = true
     var isReviewModeEnabled: Bool = true
     @Binding var confidenceSelection: ConfidenceLevel?
     @Binding var nextReviewSelection: NextReviewOption?
     var onSelectOption: (Int) -> Void = { _ in }
     var onPrevious: () -> Void = {}
+    var onCheck: () -> Void = {}
     var onNext: () -> Void = {}
 
     private var isLastQuestion: Bool { question.index >= totalQuestions }
+    private var isChecked: Bool { question.correctIndex != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -25,13 +26,14 @@ struct QuestionCardView: View {
             optionsList
 
             if question.selectedIndex != nil {
+                ConfidenceSelectorView(selection: $confidenceSelection, isLocked: isChecked)
+            }
+
+            if isChecked {
                 if isReviewModeEnabled {
                     ExplanationCard(question: question)
                 }
-                ConfidenceSelectorView(selection: $confidenceSelection)
-                if confidenceSelection != nil {
-                    NextReviewSelectorView(selection: $nextReviewSelection)
-                }
+                NextReviewSelectorView(selection: $nextReviewSelection)
             }
 
             footer
@@ -103,20 +105,35 @@ struct QuestionCardView: View {
 
             Spacer()
 
-            Button(action: onNext) {
-                HStack(spacing: 6) {
-                    Text(isLastQuestion ? "Finish" : "Next")
-                    Image(systemName: isLastQuestion ? "checkmark" : "arrow.right")
+            if isChecked {
+                Button(action: onNext) {
+                    HStack(spacing: 6) {
+                        Text(isLastQuestion ? "Finish" : "Next")
+                        Image(systemName: isLastQuestion ? "checkmark" : "arrow.right")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Theme.dark)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Theme.dark)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                Button(action: onCheck) {
+                    HStack(spacing: 6) {
+                        Text("Check Answer")
+                        Image(systemName: "checkmark.circle")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Theme.dark)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(confidenceSelection == nil)
+                .opacity(confidenceSelection == nil ? 0.4 : 1)
             }
-            .disabled(!isNextEnabled)
-            .opacity(isNextEnabled ? 1 : 0.4)
         }
     }
 }
@@ -128,17 +145,17 @@ private struct OptionRow: View {
 
     private var isSelected: Bool { option.id == question.selectedIndex }
     private var isCorrect: Bool { option.id == question.correctIndex }
-    private var showResult: Bool { question.selectedIndex != nil }
+    private var showResult: Bool { question.correctIndex != nil }
 
     private var borderColor: Color {
-        guard showResult else { return Color.black.opacity(0.06) }
+        guard showResult else { return isSelected ? Theme.dark : Color.black.opacity(0.06) }
         if isCorrect { return .green.opacity(0.4) }
         if isSelected { return .red.opacity(0.4) }
         return Color.black.opacity(0.06)
     }
 
     private var backgroundColor: Color {
-        guard showResult else { return Color.white }
+        guard showResult else { return isSelected ? Theme.dark.opacity(0.08) : Color.white }
         if isCorrect { return Color.green.opacity(0.08) }
         if isSelected { return Color.red.opacity(0.08) }
         return Color.white
@@ -166,6 +183,8 @@ private struct OptionRow: View {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 } else if showResult && isSelected {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+                } else if isSelected {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.dark)
                 } else {
                     Circle()
                         .stroke(Color.black.opacity(0.15), lineWidth: 1.5)

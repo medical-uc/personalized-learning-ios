@@ -61,12 +61,14 @@ struct QuizView: View {
                     QuestionCardView(
                         question: question,
                         totalQuestions: viewModel.totalQuestions,
-                        isNextEnabled: confidenceSelection != nil,
                         isReviewModeEnabled: viewModel.isReviewModeEnabled,
                         confidenceSelection: $confidenceSelection,
                         nextReviewSelection: $nextReviewSelection,
                         onSelectOption: { viewModel.selectOption($0) },
                         onPrevious: { viewModel.goToPrevious() },
+                        onCheck: {
+                            Task { await viewModel.checkCurrentAnswer() }
+                        },
                         onNext: {
                             guard let confidenceSelection else { return }
                             let isLastQuestion = viewModel.isLastQuestion
