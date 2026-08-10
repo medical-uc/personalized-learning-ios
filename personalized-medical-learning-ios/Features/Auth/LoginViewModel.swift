@@ -12,9 +12,9 @@ final class LoginViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var didLogIn = false
 
-    private let client: APIClient
+    private let client: any APIClientProtocol
 
-    init(client: APIClient = .shared) {
+    init(client: any APIClientProtocol = APIClient.shared) {
         self.client = client
     }
 

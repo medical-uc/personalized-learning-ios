@@ -14,11 +14,11 @@ final class FlashcardViewModel: ObservableObject {
     @Published private(set) var isRevealing = false
     @Published var errorMessage: String?
 
-    private let client: APIClient
+    private let client: any APIClientProtocol
     private var sessionId: String?
     private var hasEnded = false
 
-    init(client: APIClient = .shared) {
+    init(client: any APIClientProtocol = APIClient.shared) {
         self.client = client
     }
 
@@ -37,7 +37,7 @@ final class FlashcardViewModel: ObservableObject {
         do {
             async let cardsTask = client.getAllCards()
             async let dueTask = client.getDueFlashcards()
-            async let sessionTask = client.startFlashcardSession()
+            async let sessionTask = client.startFlashcardSession(topicPath: nil, size: nil)
             let (out, due, session) = try await (cardsTask, dueTask, sessionTask)
 
             let byUid = Dictionary(uniqueKeysWithValues: out.map { ($0.uid, $0) })

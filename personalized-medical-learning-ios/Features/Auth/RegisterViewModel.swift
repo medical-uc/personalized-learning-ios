@@ -12,9 +12,9 @@ final class RegisterViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var studentId: String?
 
-    private let client: APIClient
+    private let client: any APIClientProtocol
 
-    init(client: APIClient = .shared) {
+    init(client: any APIClientProtocol = APIClient.shared) {
         self.client = client
     }
 

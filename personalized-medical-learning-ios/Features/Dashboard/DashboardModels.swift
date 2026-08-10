@@ -66,3 +66,75 @@ enum MasteryLevel: String {
         }
     }
 }
+
+struct StudentProfileResponse: Decodable {
+    let studentId: String
+    let fullName: String
+    let studentNumber: String
+    let academicYear: Int
+    let enrolledAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case studentId = "student_id"
+        case fullName = "full_name"
+        case studentNumber = "student_number"
+        case academicYear = "academic_year"
+        case enrolledAt = "enrolled_at"
+    }
+}
+
+struct StreakResponse: Decodable {
+    let currentStreak: Int
+    let previousStreak: Int
+    let weekActivity: [Bool]
+
+    enum CodingKeys: String, CodingKey {
+        case currentStreak = "current_streak"
+        case previousStreak = "previous_streak"
+        case weekActivity = "week_activity"
+    }
+}
+
+struct EnergyResponse: Decodable {
+    let energy: Int
+}
+
+struct RestoreStreakResponse: Decodable {
+    let restoredDate: String
+    let energyBalance: Int
+
+    enum CodingKeys: String, CodingKey {
+        case restoredDate = "restored_date"
+        case energyBalance = "energy_balance"
+    }
+}
+
+enum NudgeSource: String, Decodable {
+    case quiz, flashcard
+}
+
+struct NudgePreviewItem: Decodable {
+    let source: NudgeSource
+    let questionUid: String
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case source
+        case questionUid = "question_uid"
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct NudgeResponse: Decodable {
+    let quizDueCount: Int
+    let flashcardDueCount: Int
+    let totalDueCount: Int
+    let soonestDue: NudgePreviewItem?
+
+    enum CodingKeys: String, CodingKey {
+        case quizDueCount = "quiz_due_count"
+        case flashcardDueCount = "flashcard_due_count"
+        case totalDueCount = "total_due_count"
+        case soonestDue = "soonest_due"
+    }
+}

@@ -132,6 +132,113 @@ struct QuizResultSummary {
     }
 }
 
+struct OptionOut: Decodable {
+    let index: Int
+    let text: String
+}
+
+struct QuestionOut: Decodable {
+    let uid: String
+    let stem: String
+    let options: [OptionOut]
+    let topicTag: [String]
+    let difficulty: Int
+
+    enum CodingKeys: String, CodingKey {
+        case uid, stem, options
+        case topicTag = "topic_tag"
+        case difficulty
+    }
+}
+
+struct CheckAnswerRequest: Encodable {
+    let selectedIndex: Int
+
+    enum CodingKeys: String, CodingKey {
+        case selectedIndex = "selected_index"
+    }
+}
+
+struct CheckAnswerResponse: Decodable {
+    let correct: Bool
+    let correctIndex: Int
+    let explanation: String
+
+    enum CodingKeys: String, CodingKey {
+        case correct
+        case correctIndex = "correct_index"
+        case explanation
+    }
+}
+
+struct LogAttemptRequest: Encodable {
+    let sessionId: String
+    let selectedIndex: Int
+    let confidence: String
+    let timeTakenSeconds: Double
+    let nextReviewDays: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case selectedIndex = "selected_index"
+        case confidence
+        case timeTakenSeconds = "time_taken_seconds"
+        case nextReviewDays = "next_review_days"
+    }
+}
+
+struct LogAttemptResponse: Decodable {
+    let eventId: String
+    let correct: Bool
+    let nextReviewAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
+        case correct
+        case nextReviewAt = "next_review_at"
+    }
+}
+
+struct StartSessionResponse: Decodable {
+    let sessionId: String
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+    }
+}
+
+struct EndSessionResponse: Decodable {
+    let sessionId: String
+    let questionCount: Int
+    let correctCount: Int
+    let durationSeconds: Int
+    let energyAwarded: Int
+    let energyBalance: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case durationSeconds = "duration_seconds"
+        case energyAwarded = "energy_awarded"
+        case energyBalance = "energy_balance"
+    }
+}
+
+struct CancelSessionResponse: Decodable {
+    let sessionId: String
+    let questionCount: Int
+    let correctCount: Int
+    let durationSeconds: Int
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case durationSeconds = "duration_seconds"
+    }
+}
+
 enum QuizData {
     static let sampleQuestion = QuizQuestion(
         id: "sample",

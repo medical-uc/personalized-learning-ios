@@ -12,9 +12,9 @@ final class FlashcardSetupViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
 
-    private let client: APIClient
+    private let client: any APIClientProtocol
 
-    init(client: APIClient = .shared) {
+    init(client: any APIClientProtocol = APIClient.shared) {
         self.client = client
     }
 

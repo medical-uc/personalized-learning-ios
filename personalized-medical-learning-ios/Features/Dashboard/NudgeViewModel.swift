@@ -14,9 +14,9 @@ final class NudgeViewModel: ObservableObject {
     @Published private(set) var soonestDue: NudgePreviewItem?
     @Published private(set) var isLoading = false
 
-    private let client: APIClient
+    private let client: any APIClientProtocol
 
-    init(client: APIClient = .shared) {
+    init(client: any APIClientProtocol = APIClient.shared) {
         self.client = client
     }
 

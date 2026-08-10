@@ -5,6 +5,32 @@
 
 import SwiftUI
 
+struct HistoryItem: Decodable {
+    let sessionId: String
+    let topicPath: String
+    let questionCount: Int
+    let correctCount: Int
+    let scorePercent: Int
+    let durationSeconds: Int
+    let startedAt: Date
+    let endedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case topicPath = "topic_path"
+        case questionCount = "question_count"
+        case correctCount = "correct_count"
+        case scorePercent = "score_percent"
+        case durationSeconds = "duration_seconds"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+    }
+}
+
+struct HistoryListResponse: Decodable {
+    let items: [HistoryItem]
+}
+
 struct HistoryEntry: Identifiable {
     let id: String
     let subject: String

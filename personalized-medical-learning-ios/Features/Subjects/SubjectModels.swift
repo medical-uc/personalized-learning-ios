@@ -76,6 +76,40 @@ enum SubjectTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+struct TopicListResponse: Decodable {
+    let topics: [String]
+}
+
+struct SubjectTopicOut: Decodable {
+    let path: String
+    let name: String
+    let questionCount: Int
+    let flashcardCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case path, name
+        case questionCount = "question_count"
+        case flashcardCount = "flashcard_count"
+    }
+}
+
+struct SubjectOut: Decodable {
+    let name: String
+    let questionCount: Int
+    let flashcardCount: Int
+    let topics: [SubjectTopicOut]
+
+    enum CodingKeys: String, CodingKey {
+        case name, topics
+        case questionCount = "question_count"
+        case flashcardCount = "flashcard_count"
+    }
+}
+
+struct SubjectListResponse: Decodable {
+    let subjects: [SubjectOut]
+}
+
 extension StudySubject {
     /// Builds a StudySubject from the backend catalog (GET /quiz/subjects), joining each
     /// topic's mastery from the on-device BKT store by topic_path — mirrors how

@@ -18,13 +18,13 @@ final class QuizViewModel: ObservableObject {
     let topicPath: String
     let isReviewModeEnabled: Bool
     private let questionCount: Int?
-    private let client: APIClient
+    private let client: any APIClientProtocol
     private var timerCancellable: AnyCancellable?
     private var questionShownAt: Date?
     private var answerTimeTaken: [String: Double] = [:]
     private var sessionId: String?
 
-    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: APIClient = .shared) {
+    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
         self.topicPath = topicPath
         self.questionCount = questionCount
         self.isReviewModeEnabled = isReviewModeEnabled
