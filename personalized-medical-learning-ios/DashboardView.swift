@@ -47,54 +47,105 @@ struct DashboardView: View {
                 showBrokenStreakSheet = true
             }
         }
-        .sheet(isPresented: $showBrokenStreakSheet) {
-            if let brokenStreakLength = streakViewModel.brokenStreakLength {
-                StreakBrokenView(streakLength: brokenStreakLength)
+        .fullScreenCover(isPresented: $showBrokenStreakSheet) {
+            StreakBrokenView(streakViewModel: streakViewModel) {
+                showBrokenStreakSheet = false
             }
+            .presentationBackground(Color.clear)
+            .interactiveDismissDisabled()
         }
     }
 }
 
 private struct StreakBrokenView: View {
-    let streakLength: Int
-    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var streakViewModel: StreakViewModel
+    let onDismiss: () -> Void
 
+    private var streakLength: Int { streakViewModel.brokenStreakLength ?? 0 }
     private var dayWord: String { streakLength == 1 ? "day" : "days" }
 
-    var body: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle().fill(Color.orange.opacity(0.12)).frame(width: 88, height: 88)
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.orange)
+    private func restore() {
+        Task {
+            await streakViewModel.restoreStreak()
+            if streakViewModel.brokenStreakLength == nil {
+                onDismiss()
             }
-            .padding(.top, 8)
-
-            VStack(spacing: 8) {
-                Text("Streak broken")
-                    .font(.title2.bold())
-                    .foregroundStyle(Theme.dark)
-                Text("Your \(streakLength)-\(dayWord) streak ended. Answer a quiz question or review a flashcard today to start a new one.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Button(action: { dismiss() }) {
-                Text("Got it")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Theme.dark)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .buttonStyle(.plain)
         }
-        .padding(24)
-        .presentationDetents([.height(320)])
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle().fill(Color.orange.opacity(0.12)).frame(width: 88, height: 88)
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(Color.orange)
+                }
+                .padding(.top, 8)
+
+                VStack(spacing: 8) {
+                    Text("Streak broken")
+                        .font(.title2.bold())
+                        .foregroundStyle(Theme.dark)
+                    Text("Your \(streakLength)-\(dayWord) streak ended. Answer a quiz question or review a flashcard today to start a new one.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let restoreErrorMessage = streakViewModel.restoreErrorMessage {
+                        Text(restoreErrorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    Button(action: restore) {
+                        HStack(spacing: 6) {
+                            if streakViewModel.isRestoring {
+                                ProgressView().tint(.white)
+                            } else {
+                                Image(systemName: "bolt.fill")
+                            }
+                            Text("Restore Streak (10 energy)")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.orange)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(streakViewModel.isRestoring)
+
+                    Button(action: onDismiss) {
+                        Text("Got it")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.dark)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Theme.bg)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(streakViewModel.isRestoring)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: 360)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: .black.opacity(0.2), radius: 20, y: 8)
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 }
 
@@ -359,8 +410,14 @@ struct SectionHeader: View {
 }
 
 #Preview("Streak Broken") {
-    Color.clear
-        .sheet(isPresented: .constant(true)) {
-            StreakBrokenView(streakLength: 12)
+    let previewViewModel: StreakViewModel = {
+        let viewModel = StreakViewModel()
+        viewModel.brokenStreakLength = 12
+        return viewModel
+    }()
+
+    return Color.clear
+        .overlay {
+            StreakBrokenView(streakViewModel: previewViewModel, onDismiss: {})
         }
 }

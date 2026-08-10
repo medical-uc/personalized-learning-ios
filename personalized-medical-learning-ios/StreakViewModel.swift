@@ -16,6 +16,9 @@ final class StreakViewModel: ObservableObject {
     /// DashboardView turns this into a modal; nil once dismissed.
     @Published var brokenStreakLength: Int?
 
+    @Published private(set) var isRestoring = false
+    @Published var restoreErrorMessage: String?
+
     private let client: APIClient
 
     init(client: APIClient = .shared) {
@@ -36,6 +39,22 @@ final class StreakViewModel: ObservableObject {
         } catch {
             currentStreak = 0
             weekActivity = [Bool](repeating: false, count: 7)
+        }
+    }
+
+    /// Spends energy to bridge a just-broken, exactly-one-day gap. On success, reloads
+    /// the streak so currentStreak/brokenStreakLength reflect the restored state.
+    func restoreStreak() async {
+        isRestoring = true
+        restoreErrorMessage = nil
+        defer { isRestoring = false }
+
+        do {
+            _ = try await client.restoreStreak()
+            await loadStreak()
+            brokenStreakLength = nil
+        } catch {
+            restoreErrorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
     }
 }

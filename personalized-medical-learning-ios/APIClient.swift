@@ -91,6 +91,16 @@ struct EnergyResponse: Decodable {
     let energy: Int
 }
 
+struct RestoreStreakResponse: Decodable {
+    let restoredDate: String
+    let energyBalance: Int
+
+    enum CodingKeys: String, CodingKey {
+        case restoredDate = "restored_date"
+        case energyBalance = "energy_balance"
+    }
+}
+
 enum NudgeSource: String, Decodable {
     case quiz, flashcard
 }
@@ -126,6 +136,12 @@ struct APIValidationError: Decodable {
         let msg: String
     }
     let detail: [Detail]
+}
+
+/// FastAPI's plain HTTPException(detail="...") shape — used by 409s like streak
+/// restore's eligibility failures, distinct from the 422 validation-error array shape.
+struct PlainDetailError: Decodable {
+    let detail: String
 }
 
 struct TopicListResponse: Decodable {
@@ -419,11 +435,17 @@ extension Notification.Name {
     static let energyAwarded = Notification.Name("energyAwarded")
 }
 
-/// userInfo payload posted alongside .energyAwarded — awarded is 0 for cancelled
-/// sessions (no notification fires there since cancelSession has no energy fields).
+/// userInfo payload posted alongside .energyAwarded — amount is positive for quiz/
+/// flashcard awards, negative for spends (e.g. streak restore). Never posted for a
+/// zero delta (cancelled sessions have no energy fields, so never trigger this).
 enum EnergyAwardedKey {
     static let amount = "amount"
     static let balance = "balance"
+}
+
+/// Costs for spending energy — mirrors backend src/student_kg/streak.py constants.
+enum EnergyCost {
+    static let restoreStreak = 10
 }
 
 enum APIConfig {
@@ -626,6 +648,19 @@ final class APIClient {
         return try await get(path: "students/me/streak", token: token)
     }
 
+    /// Spends RESTORE_STREAK_COST (10) energy to bridge a just-broken, exactly-one-day
+    /// gap. Throws .server with the backend's message on 409 (gap too large, or balance
+    /// too low) — callers should call getStreak first and only offer this when
+    /// current_streak == 0 && previous_streak > 0.
+    func restoreStreak() async throws -> RestoreStreakResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to restore your streak.")
+        }
+        let response: RestoreStreakResponse = try await post(path: "students/me/streak/restore", expectedStatus: 200, token: token)
+        postEnergyAwarded(-EnergyCost.restoreStreak, balance: response.energyBalance)
+        return response
+    }
+
     /// Re-syncs the displayed balance (app open, another tab awarded energy, etc.) —
     /// awards themselves arrive inline from endSession/logReview via .energyAwarded.
     func getEnergy() async throws -> EnergyResponse {
@@ -636,7 +671,7 @@ final class APIClient {
     }
 
     private func postEnergyAwarded(_ amount: Int, balance: Int) {
-        guard amount > 0 else { return }
+        guard amount != 0 else { return }
         NotificationCenter.default.post(
             name: .energyAwarded,
             object: nil,
@@ -777,6 +812,9 @@ final class APIClient {
         if let validationError = try? JSONDecoder().decode(APIValidationError.self, from: data),
            let firstMessage = validationError.detail.first?.msg {
             return .server(firstMessage)
+        }
+        if let plainDetail = try? JSONDecoder().decode(PlainDetailError.self, from: data) {
+            return .server(plainDetail.detail)
         }
         return .server("\(action) failed (status \(statusCode)).")
     }
