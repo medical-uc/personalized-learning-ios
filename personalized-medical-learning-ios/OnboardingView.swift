@@ -113,27 +113,42 @@ private struct SubjectPicker: View {
     @Binding var selection: Set<String>
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
+    /// Onboarding runs before login (see ContentView's .loggedOut state), so it has no
+    /// auth token to call GET /quiz/subjects with — this stays a fixed, name-only pick
+    /// list rather than a live fetch. selectedSubjectNames isn't persisted or sent to
+    /// the backend anywhere today, so accuracy here doesn't matter yet; SubjectsView is
+    /// the one place that reflects the real backend catalog.
+    private static let options: [(name: String, icon: String, tint: Color)] = [
+        ("Cardiology", "heart.fill", .red),
+        ("Anatomy", "figure.stand", .teal),
+        ("Pharmacology", "pills.fill", .orange),
+        ("Pathology", "microscope", .blue),
+        ("Microbiology", "circle.grid.3x3.fill", .purple),
+        ("Neurology", "brain.head.profile", .pink),
+        ("Pulmonology", "lungs.fill", .cyan)
+    ]
+
     var body: some View {
         LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(SubjectData.subjects) { subject in
-                let isSelected = selection.contains(subject.name)
+            ForEach(Self.options, id: \.name) { option in
+                let isSelected = selection.contains(option.name)
                 Button {
                     if isSelected {
-                        selection.remove(subject.name)
+                        selection.remove(option.name)
                     } else {
-                        selection.insert(subject.name)
+                        selection.insert(option.name)
                     }
                 } label: {
                     HStack(spacing: 10) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(subject.tint.opacity(0.12))
+                                .fill(option.tint.opacity(0.12))
                                 .frame(width: 36, height: 36)
-                            Image(systemName: subject.icon)
+                            Image(systemName: option.icon)
                                 .font(.subheadline)
-                                .foregroundStyle(subject.tint)
+                                .foregroundStyle(option.tint)
                         }
-                        Text(subject.name)
+                        Text(option.name)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(isSelected ? .white : Theme.dark)
                         Spacer(minLength: 0)

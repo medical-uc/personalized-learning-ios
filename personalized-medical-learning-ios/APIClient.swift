@@ -126,6 +126,36 @@ struct TopicListResponse: Decodable {
     let topics: [String]
 }
 
+struct SubjectTopicOut: Decodable {
+    let path: String
+    let name: String
+    let questionCount: Int
+    let flashcardCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case path, name
+        case questionCount = "question_count"
+        case flashcardCount = "flashcard_count"
+    }
+}
+
+struct SubjectOut: Decodable {
+    let name: String
+    let questionCount: Int
+    let flashcardCount: Int
+    let topics: [SubjectTopicOut]
+
+    enum CodingKeys: String, CodingKey {
+        case name, topics
+        case questionCount = "question_count"
+        case flashcardCount = "flashcard_count"
+    }
+}
+
+struct SubjectListResponse: Decodable {
+    let subjects: [SubjectOut]
+}
+
 struct OptionOut: Decodable {
     let index: Int
     let text: String
@@ -452,6 +482,14 @@ final class APIClient {
     func listTopics() async throws -> [String] {
         let response: TopicListResponse = try await get(path: "quiz/topics")
         return response.topics
+    }
+
+    func listSubjects() async throws -> [SubjectOut] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view subjects.")
+        }
+        let response: SubjectListResponse = try await get(path: "quiz/subjects", token: token)
+        return response.subjects
     }
 
     func getQuestions(topicPath: String) async throws -> [QuestionOut] {

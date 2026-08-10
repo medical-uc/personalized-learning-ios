@@ -13,17 +13,11 @@ struct MasteryEntry: Identifiable {
 
     var percent: Int { Int((pKnow * 100).rounded()) }
 
-    var tint: Color {
-        if percent > 70 { return .green }
-        if percent >= 65 { return .yellow }
-        return .red
-    }
+    var level: MasteryLevel { MasteryLevel(pKnow: pKnow) }
 
-    var statusLabel: String {
-        if percent > 70 { return "Strong" }
-        if percent >= 65 { return "Developing" }
-        return "Needs Work"
-    }
+    var tint: Color { level.tint }
+
+    var statusLabel: String { level.label }
 
     /// Deepest segment of topic_path (e.g. "ENDOCRINOLOGY > Thyroid hormone synthesis" -> "Thyroid hormone synthesis"),
     /// same leaf-vs-subject split the backend's topic_tag chain already encodes.

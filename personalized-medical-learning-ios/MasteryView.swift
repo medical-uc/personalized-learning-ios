@@ -94,7 +94,7 @@ private struct MasteryInfoView: View {
                 InfoBullet(text: "It updates a little after every question you answer, correct or not.")
             }
 
-            Text("Lower percentages surface first so you know what to practice next.")
+            Text("Topics needing the most work surface first so you know what to practice next.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -148,9 +148,13 @@ private struct MasteryRow: View {
 
                 Spacer(minLength: 0)
 
-                Text("\(entry.percent)%")
-                    .font(.subheadline.weight(.semibold))
+                Text(entry.statusLabel)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(entry.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(entry.tint.opacity(0.12))
+                    .clipShape(Capsule())
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -222,7 +226,7 @@ private struct MasteryDetailView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle().fill(entry.tint.opacity(0.12)).frame(width: 96, height: 96)
-                            Text("\(entry.percent)%")
+                            Image(systemName: "chart.bar.fill")
                                 .font(.title.bold())
                                 .foregroundStyle(entry.tint)
                         }
@@ -249,7 +253,7 @@ private struct MasteryDetailView: View {
                     .padding(.top, 12)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Why this number")
+                        Text("Why this level")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.dark)
                         Text(explanation)
@@ -260,6 +264,8 @@ private struct MasteryDetailView: View {
                     .padding(16)
                     .background(Theme.mint.opacity(0.4))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    bktBreakdown
 
                     HStack(spacing: 8) {
                         Image(systemName: "clock").foregroundStyle(.secondary)
@@ -273,11 +279,6 @@ private struct MasteryDetailView: View {
             .background(Theme.bg)
             .navigationTitle("Topic Breakdown")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", action: { dismiss() })
-                }
-            }
         }
     }
 
@@ -289,6 +290,80 @@ private struct MasteryDetailView: View {
             return "You're getting some \(entry.topicName) questions right, but the estimate isn't confident yet — a few more attempts will sharpen this score. A bit more practice here will help."
         default:
             return "Recent attempts on \(entry.topicName) suggest this isn't solid yet. This score already discounts lucky guesses, so it reflects real gaps — a good candidate for focused practice."
+        }
+    }
+
+    /// Chains simulate() n times so each row reflects n *consecutive* answers of the
+    /// same kind, not n independent single-attempt previews — that's the "how many
+    /// questions to get there" the tiles were missing.
+    private func streak(correct: Bool, count: Int) -> [MasteryLevel] {
+        var results: [MasteryLevel] = []
+        var current = entry.pKnow
+        for _ in 0..<count {
+            current = BKTStore.simulate(current: current, correct: correct)
+            results.append(MasteryLevel(pKnow: current))
+        }
+        return results
+    }
+
+    private var correctStreak: [MasteryLevel] { streak(correct: true, count: 5) }
+    private var incorrectStreak: [MasteryLevel] { streak(correct: false, count: 5) }
+
+    private var bktBreakdown: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("How this score is calculated")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.dark)
+
+            Text("Every topic starts at Needs Work. Each time you answer a question, your level can move up or down depending on whether you got it right — while also accounting for lucky guesses and careless mistakes so one answer doesn't swing it too far.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            Text("If your next questions go correct")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            StreakRow(values: correctStreak)
+
+            Text("If your next questions go incorrect")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            StreakRow(values: incorrectStreak)
+
+            Text("Each column assumes you keep answering the same way in a row, starting from your current level.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.06)))
+    }
+}
+
+private struct StreakRow: View {
+    let values: [MasteryLevel]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(values.enumerated()), id: \.offset) { index, value in
+                VStack(spacing: 4) {
+                    Text("\(index + 1)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(value.label)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(value.tint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(value.tint.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
         }
     }
 }

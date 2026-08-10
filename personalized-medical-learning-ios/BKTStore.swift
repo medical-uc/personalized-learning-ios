@@ -19,10 +19,10 @@ enum BKTStore {
     private static let pKnowKey = "bkt.pKnow"
     private static let updatedAtKey = "bkt.updatedAt"
 
-    private static let pInit = 0.30
-    private static let pTransit = 0.10
-    private static let pSlip = 0.10
-    private static let pGuess = 0.25
+    static let pInit = 0.30
+    static let pTransit = 0.10
+    static let pSlip = 0.10
+    static let pGuess = 0.25
 
     private static var pKnowByTopic: [String: Double] {
         get { UserDefaults.standard.dictionary(forKey: pKnowKey) as? [String: Double] ?? [:] }
@@ -44,18 +44,24 @@ enum BKTStore {
         updatedAtByTopic[topicPath].map { Date(timeIntervalSince1970: $0) }
     }
 
-    /// Records one graded attempt for topicPath: Bayes update on correct/incorrect,
-    /// then the learning-transition step. Ported from bkt_update() in the (now-removed)
-    /// src/quiz/mastery.py — see that module's history for the original.
-    @discardableResult
-    static func record(topicPath: String, correct: Bool) -> Double {
-        let current = pKnow(for: topicPath)
+    /// Pure Bayes update + learning-transition step, no persistence. Ported from
+    /// bkt_update() in the (now-removed) src/quiz/mastery.py — see that module's
+    /// history for the original. Exposed so UI can preview "what if" outcomes
+    /// without recording an attempt.
+    static func simulate(current: Double, correct: Bool) -> Double {
         let numerator = correct ? current * (1 - pSlip) : current * pSlip
         let denominator = correct
             ? numerator + (1 - current) * pGuess
             : numerator + (1 - current) * (1 - pGuess)
         let posterior = denominator > 0 ? numerator / denominator : current
-        let next = posterior + (1 - posterior) * pTransit
+        return posterior + (1 - posterior) * pTransit
+    }
+
+    /// Records one graded attempt for topicPath: Bayes update on correct/incorrect,
+    /// then the learning-transition step.
+    @discardableResult
+    static func record(topicPath: String, correct: Bool) -> Double {
+        let next = simulate(current: pKnow(for: topicPath), correct: correct)
 
         var byTopic = pKnowByTopic
         byTopic[topicPath] = next

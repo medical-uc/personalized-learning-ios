@@ -5,32 +5,68 @@
 
 import SwiftUI
 
-struct Subject: Identifiable {
-    let id = UUID()
-    let name: String
-    let icon: String
-    let tint: Color
-    let progress: Double
-    let concepts: Int
-    let questions: Int
-    let flashcards: Int
-    let description: String
-    let masteredConcepts: Int
-    let timeStudied: String
-    let topics: [Topic]
-    let recommendedTopic: String
-    let relatedConcepts: [String]
-}
-
 struct Topic: Identifiable {
-    let id = UUID()
+    let id: String  // topic_path — stable across reloads, unlike a fresh UUID
     let number: Int
     let name: String
-    let description: String
-    let progress: Double
-    let concepts: Int
-    let flashcards: Int
+    let questionCount: Int
+    let flashcardCount: Int
+    let progress: Double  // BKTStore.pKnow(for: id), joined client-side — see MasteryEntry
     let isComplete: Bool
+}
+
+/// Named StudySubject, not Subject, to avoid colliding with Combine's Subject protocol
+/// (@Published/ObservableObject bring Combine into scope everywhere this type is used).
+struct StudySubject: Identifiable {
+    let id: String  // subject name — stable across reloads
+    let name: String
+    let questionCount: Int
+    let flashcardCount: Int
+    let topics: [Topic]
+
+    /// Mean of this subject's topics' BKT mastery — 0 for a subject with no topics
+    /// (shouldn't happen from the backend, but keeps this total rather than partial).
+    var progress: Double {
+        guard !topics.isEmpty else { return 0 }
+        return topics.reduce(0) { $0 + $1.progress } / Double(topics.count)
+    }
+
+    var masteredConcepts: Int {
+        topics.filter { $0.isComplete }.count
+    }
+
+    /// Best-effort subject -> icon/tint, same keyword table MasteryEntry uses for the
+    /// dashboard's Focus Areas card, so a subject reads the same color/glyph everywhere
+    /// it appears. Falls back to a generic book for subjects outside the curated list.
+    private static let subjectStyles: [(keyword: String, icon: String, tint: Color)] = [
+        ("cardio", "heart.fill", .red),
+        ("pharma", "pills.fill", .orange),
+        ("physio", "brain.head.profile", .orange),
+        ("anatom", "figure.stand", .teal),
+        ("patho", "microscope", .blue),
+        ("micro", "circle.grid.3x3.fill", .purple),
+        ("neuro", "brain.head.profile", .pink),
+        ("endocrin", "drop.fill", .mint),
+        ("respirat", "lungs.fill", .cyan),
+        ("pulmo", "lungs.fill", .cyan),
+        ("renal", "drop.triangle.fill", .brown),
+        ("digest", "figure.walk", .green),
+        ("gi ", "figure.walk", .green),
+        ("pelvi", "figure.stand", .indigo),
+        ("abdomin", "figure.stand", .teal),
+        ("histolog", "microscope", .blue),
+        ("face", "person.fill", .teal),
+        ("oral", "person.fill", .teal),
+        ("neck", "person.fill", .teal)
+    ]
+
+    var icon: String {
+        Self.subjectStyles.first { name.localizedCaseInsensitiveContains($0.keyword) }?.icon ?? "book.closed.fill"
+    }
+
+    var tint: Color {
+        Self.subjectStyles.first { name.localizedCaseInsensitiveContains($0.keyword) }?.tint ?? Theme.dark
+    }
 }
 
 enum SubjectTab: String, CaseIterable, Identifiable {
@@ -40,80 +76,27 @@ enum SubjectTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-enum SubjectData {
-    static let cardiologyTopics: [Topic] = [
-        .init(number: 1, name: "Cardiac Anatomy", description: "Structure of the heart and blood vessels", progress: 1.0, concepts: 32, flashcards: 82, isComplete: true),
-        .init(number: 2, name: "Cardiac Physiology", description: "Electrical activity and cardiac cycle", progress: 0.78, concepts: 28, flashcards: 108, isComplete: false),
-        .init(number: 3, name: "ECG Interpretation", description: "Understanding ECG waves and rhythms", progress: 0.45, concepts: 24, flashcards: 96, isComplete: false),
-        .init(number: 4, name: "Arrhythmias", description: "Types, causes and management", progress: 0.30, concepts: 26, flashcards: 110, isComplete: false),
-        .init(number: 5, name: "Heart Failure", description: "Pathophysiology and clinical management", progress: 0.92, concepts: 18, flashcards: 72, isComplete: false),
-        .init(number: 6, name: "Hypertension", description: "Diagnosis and treatment", progress: 0.80, concepts: 14, flashcards: 65, isComplete: false),
-        .init(number: 7, name: "Valvular Heart Disease", description: "Disorders of heart valves", progress: 0.60, concepts: 20, flashcards: 83, isComplete: false)
-    ]
-
-    static let subjects: [Subject] = [
-        .init(
-            name: "Cardiology", icon: "heart.fill", tint: .red, progress: 0.82,
-            concepts: 142, questions: 420, flashcards: 1220,
-            description: "Study the structure, function, and disorders of the heart and blood vessels.",
-            masteredConcepts: 142, timeStudied: "16h 24m",
-            topics: cardiologyTopics,
-            recommendedTopic: "ECG Interpretation",
-            relatedConcepts: ["SA Node", "AV Node", "Bundle of His", "P Wave", "QRS Complex"]
-        ),
-        .init(
-            name: "Anatomy", icon: "figure.stand", tint: .teal, progress: 0.63,
-            concepts: 218, questions: 560, flashcards: 1842,
-            description: "Study the structure of the human body, from cells to organ systems.",
-            masteredConcepts: 137, timeStudied: "12h 05m",
-            topics: [],
-            recommendedTopic: "Skeletal System",
-            relatedConcepts: ["Femur", "Scapula", "Cranium", "Vertebrae"]
-        ),
-        .init(
-            name: "Pharmacology", icon: "pills.fill", tint: .orange, progress: 0.54,
-            concepts: 310, questions: 680, flashcards: 2105,
-            description: "Study how drugs interact with biological systems and their clinical uses.",
-            masteredConcepts: 167, timeStudied: "9h 40m",
-            topics: [],
-            recommendedTopic: "Antibiotics",
-            relatedConcepts: ["Pharmacokinetics", "Pharmacodynamics", "Half-Life"]
-        ),
-        .init(
-            name: "Pathology", icon: "microscope", tint: .blue, progress: 0.71,
-            concepts: 180, questions: 410, flashcards: 1150,
-            description: "Study the causes and effects of disease on the body.",
-            masteredConcepts: 128, timeStudied: "10h 12m",
-            topics: [],
-            recommendedTopic: "Neoplasia",
-            relatedConcepts: ["Necrosis", "Inflammation", "Apoptosis"]
-        ),
-        .init(
-            name: "Microbiology", icon: "circle.grid.3x3.fill", tint: .purple, progress: 0.43,
-            concepts: 126, questions: 300, flashcards: 980,
-            description: "Study of bacteria, viruses, fungi, and other microorganisms.",
-            masteredConcepts: 54, timeStudied: "5h 30m",
-            topics: [],
-            recommendedTopic: "Virology",
-            relatedConcepts: ["Gram Stain", "Bacteriophage", "Antigen"]
-        ),
-        .init(
-            name: "Neurology", icon: "brain.head.profile", tint: .pink, progress: 0.22,
-            concepts: 84, questions: 210, flashcards: 620,
-            description: "Study of the nervous system and its disorders.",
-            masteredConcepts: 18, timeStudied: "2h 50m",
-            topics: [],
-            recommendedTopic: "Cranial Nerves",
-            relatedConcepts: ["Synapse", "Neuron", "Axon"]
-        ),
-        .init(
-            name: "Pulmonology", icon: "lungs.fill", tint: .cyan, progress: 0.58,
-            concepts: 96, questions: 250, flashcards: 720,
-            description: "Study of the respiratory system and its disorders.",
-            masteredConcepts: 56, timeStudied: "6h 18m",
-            topics: [],
-            recommendedTopic: "Gas Exchange",
-            relatedConcepts: ["Alveoli", "Bronchi", "Diaphragm"]
-        )
-    ]
+extension StudySubject {
+    /// Builds a StudySubject from the backend catalog (GET /quiz/subjects), joining each
+    /// topic's mastery from the on-device BKT store by topic_path — mirrors how
+    /// MasteryEntry/BKTStore.allEntries() already join mastery onto topic_path elsewhere
+    /// in the app, so this page's percentages always agree with Mastery/Dashboard.
+    init(from out: SubjectOut) {
+        self.id = out.name
+        self.name = out.name
+        self.questionCount = out.questionCount
+        self.flashcardCount = out.flashcardCount
+        self.topics = out.topics.enumerated().map { index, t in
+            let pKnow = BKTStore.pKnow(for: t.path)
+            return Topic(
+                id: t.path,
+                number: index + 1,
+                name: t.name,
+                questionCount: t.questionCount,
+                flashcardCount: t.flashcardCount,
+                progress: pKnow,
+                isComplete: pKnow > 0.7
+            )
+        }
+    }
 }

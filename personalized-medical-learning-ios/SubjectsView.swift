@@ -9,8 +9,14 @@ struct SubjectsView: View {
     var onBack: () -> Void = {}
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @StateObject private var viewModel = SubjectsViewModel()
     @State private var selectedTab: SubjectTab = .allSubjects
-    @State private var selectedSubject: Subject? = SubjectData.subjects.first
+    @State private var selectedSubjectID: String?
+
+    private var selectedSubject: StudySubject? {
+        guard let selectedSubjectID else { return nil }
+        return viewModel.subjects.first { $0.id == selectedSubjectID }
+    }
 
     var body: some View {
         Group {
@@ -46,6 +52,12 @@ struct SubjectsView: View {
         .padding(.top, horizontalSizeClass == .regular ? 24 : 0)
         .padding(.bottom, horizontalSizeClass == .regular ? 24 : 0)
         .background(Theme.bg)
+        .task {
+            await viewModel.loadSubjects()
+            if selectedSubjectID == nil {
+                selectedSubjectID = viewModel.subjects.first?.id
+            }
+        }
     }
 
     private var listPane: some View {
@@ -55,14 +67,31 @@ struct SubjectsView: View {
 
                 SubjectTabBar(selectedTab: $selectedTab)
 
-                VStack(spacing: 14) {
-                    ForEach(SubjectData.subjects) { subject in
-                        SubjectRow(
-                            subject: subject,
-                            isSelected: subject.id == selectedSubject?.id
-                        )
-                        .onTapGesture { selectedSubject = subject }
-                    }
+                content
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.isLoading && viewModel.subjects.isEmpty {
+            Text("Loading subjects…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 60)
+        } else if let errorMessage = viewModel.errorMessage, viewModel.subjects.isEmpty {
+            SubjectsErrorView(message: errorMessage) {
+                Task { await viewModel.loadSubjects() }
+            }
+        } else {
+            VStack(spacing: 14) {
+                ForEach(viewModel.subjects) { subject in
+                    SubjectRow(
+                        subject: subject,
+                        isSelected: subject.id == selectedSubjectID
+                    )
+                    .onTapGesture { selectedSubjectID = subject.id }
                 }
             }
         }
@@ -72,7 +101,7 @@ struct SubjectsView: View {
     private var detailPane: some View {
         if let selectedSubject {
             ScrollView {
-                SubjectDetailView(subject: selectedSubject, onBack: { self.selectedSubject = nil })
+                SubjectDetailView(subject: selectedSubject, onBack: { self.selectedSubjectID = nil })
             }
         }
     }
@@ -84,6 +113,32 @@ struct SubjectsView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+private struct SubjectsErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Retry", action: onRetry)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Theme.dark)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 }
 
@@ -115,7 +170,7 @@ private struct SubjectTabBar: View {
 }
 
 private struct SubjectRow: View {
-    let subject: Subject
+    let subject: StudySubject
     let isSelected: Bool
 
     var body: some View {
@@ -136,7 +191,7 @@ private struct SubjectRow: View {
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
 
-                Text("\(subject.concepts) concepts · \(subject.questions) questions · \(subject.flashcards) flashcards")
+                Text("\(subject.topics.count) topics · \(subject.questionCount) questions · \(subject.flashcardCount) flashcards")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

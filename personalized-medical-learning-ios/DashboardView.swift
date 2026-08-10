@@ -243,14 +243,15 @@ private struct FocusAreaRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-
-                ProgressView(value: Double(entry.percent), total: 100)
-                    .tint(entry.tint)
             }
 
-            Text("\(entry.percent)%")
+            Text(entry.statusLabel)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(entry.tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(entry.tint.opacity(0.12))
+                .clipShape(Capsule())
 
             Button(action: onPractice) {
                 Text("Practice Now")

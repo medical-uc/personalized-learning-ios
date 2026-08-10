@@ -41,3 +41,28 @@ enum Theme {
     static let card = Color.white
     static let mint = Color(red: 0.86, green: 0.92, blue: 0.90)
 }
+
+/// Ordinal read of a 0...1 BKT pKnow value, replacing raw percentages in the UI.
+/// Shared thresholds so a topic reads the same tier everywhere it appears
+/// (Knowledge Level, Dashboard Focus Areas, Subjects, Quiz Setup).
+enum MasteryLevel: String {
+    case strong = "Strong"
+    case developing = "Developing"
+    case needsWork = "Needs Work"
+
+    init(pKnow: Double) {
+        if pKnow > 0.70 { self = .strong }
+        else if pKnow >= 0.50 { self = .developing }
+        else { self = .needsWork }
+    }
+
+    var label: String { rawValue }
+
+    var tint: Color {
+        switch self {
+        case .strong: return .green
+        case .developing: return .yellow
+        case .needsWork: return .red
+        }
+    }
+}
