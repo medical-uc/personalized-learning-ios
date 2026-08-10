@@ -331,6 +331,46 @@ struct DueReviewResponse: Decodable {
     let items: [DueReviewItem]
 }
 
+struct MasteryItem: Decodable {
+    let topicPath: String
+    let pKnow: Double
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case topicPath = "topic_path"
+        case pKnow = "p_know"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct MasteryResponse: Decodable {
+    let items: [MasteryItem]
+}
+
+/// One topic_path/p_know pair pushed to PUT /quiz/mastery — mirrors the backend's
+/// MasteryUpdateItem (no updated_at; the server stamps that on write).
+struct MasteryUpdateItem: Encodable {
+    let topicPath: String
+    let pKnow: Double
+
+    enum CodingKeys: String, CodingKey {
+        case topicPath = "topic_path"
+        case pKnow = "p_know"
+    }
+}
+
+struct UpdateMasteryRequest: Encodable {
+    let items: [MasteryUpdateItem]
+}
+
+struct UpdateMasteryResponse: Decodable {
+    let updatedCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case updatedCount = "updated_count"
+    }
+}
+
 struct FlashcardOut: Decodable {
     let uid: String
     let front: String
@@ -670,6 +710,31 @@ final class APIClient {
         return response.items
     }
 
+    func getMastery() async throws -> [MasteryItem] {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to view mastery.")
+        }
+        let response: MasteryResponse = try await get(path: "quiz/mastery", token: token)
+        return response.items
+    }
+
+    /// Pushes this device's on-device BKT state (see BKTStore) for the given topics up to
+    /// the server so it's backed up/synced across devices — the server does no BKT math of
+    /// its own, it just persists whatever p_know the client computed.
+    @discardableResult
+    func putMastery(_ items: [MasteryUpdateItem]) async throws -> UpdateMasteryResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to sync mastery.")
+        }
+        return try await send(
+            path: "quiz/mastery",
+            body: UpdateMasteryRequest(items: items),
+            expectedStatus: 200,
+            method: "PUT",
+            token: token
+        )
+    }
+
     func getAllCards() async throws -> [FlashcardOut] {
         try await get(path: "flashcards/cards")
     }
@@ -875,12 +940,13 @@ final class APIClient {
         path: String,
         body: Body,
         expectedStatus: Int,
+        method: String = "POST",
         token: String? = SessionManager.token
     ) async throws -> Response {
         let url = APIConfig.baseURL.appendingPathComponent(path)
 
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

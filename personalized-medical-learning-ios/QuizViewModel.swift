@@ -184,6 +184,18 @@ final class QuizViewModel: ObservableObject {
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
+        await syncMastery()
+    }
+
+    /// Pushes this session's on-device BKT results (see BKTStore, updated per-answer in
+    /// checkAnswer()) up to the server so they survive across devices/reinstalls. Best-effort:
+    /// the device's BKTStore is already the source of truth and the student has already seen
+    /// their results, so a sync failure here shouldn't surface as a quiz-ending error.
+    private func syncMastery() async {
+        let topicPaths = Set(questions.map(\.topicPath))
+        guard !topicPaths.isEmpty else { return }
+        let items = topicPaths.map { MasteryUpdateItem(topicPath: $0, pKnow: BKTStore.pKnow(for: $0)) }
+        _ = try? await client.putMastery(items)
     }
 
     func cancelQuiz() async {
