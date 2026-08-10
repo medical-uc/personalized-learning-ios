@@ -338,6 +338,13 @@ struct FlashcardOut: Decodable {
         case topicTag = "topic_tag"
         case difficulty
     }
+
+    /// Same " > "-joined shape as MasteryEntry.topicPath, so BKTStore keys line up
+    /// with zero translation — lets session ordering sort by weakness before a
+    /// Flashcard (which withholds back/explanation) is even constructed.
+    var topicPath: String {
+        topicTag.isEmpty ? "General" : topicTag.joined(separator: " > ")
+    }
 }
 
 struct FlashcardRevealResponse: Decodable {
@@ -351,7 +358,13 @@ enum FlashcardRating: String, Codable {
 }
 
 struct LogFlashcardReviewRequest: Encodable {
+    let sessionId: String
     let rating: FlashcardRating
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case rating
+    }
 }
 
 struct LogFlashcardReviewResponse: Decodable {
@@ -696,13 +709,13 @@ final class APIClient {
         try await post(path: "flashcards/cards/\(uid)/reveal", expectedStatus: 200)
     }
 
-    func logReview(uid: String, rating: FlashcardRating) async throws -> LogFlashcardReviewResponse {
+    func logReview(uid: String, sessionId: String, rating: FlashcardRating) async throws -> LogFlashcardReviewResponse {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to log a review.")
         }
         let response: LogFlashcardReviewResponse = try await send(
             path: "flashcards/cards/\(uid)/log",
-            body: LogFlashcardReviewRequest(rating: rating),
+            body: LogFlashcardReviewRequest(sessionId: sessionId, rating: rating),
             expectedStatus: 200,
             token: token
         )

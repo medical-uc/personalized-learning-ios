@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var pendingSelection: SidebarItem?
     @State private var preselectedSetupTopicPath: String?
     @State private var energyToastAmount: Int?
+    @State private var isFlashcardSessionStarted = false
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
@@ -68,7 +69,16 @@ struct RootView: View {
                         )
                     }
                 case .flashcards:
-                    FlashcardView(onBack: { selection = .dashboard })
+                    if isFlashcardSessionStarted {
+                        FlashcardView(onBack: {
+                            isFlashcardSessionStarted = false
+                        })
+                        .onDisappear { isFlashcardSessionStarted = false }
+                    } else {
+                        FlashcardSetupView(onBegin: {
+                            isFlashcardSessionStarted = true
+                        })
+                    }
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })
                 case .bookmarks:

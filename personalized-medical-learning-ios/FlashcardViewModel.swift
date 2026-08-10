@@ -36,13 +36,25 @@ final class FlashcardViewModel: ObservableObject {
 
         do {
             async let cardsTask = client.getAllCards()
+            async let dueTask = client.getDueFlashcards()
             async let sessionTask = client.startFlashcardSession()
-            let (out, session) = try await (cardsTask, sessionTask)
+            let (out, due, session) = try await (cardsTask, dueTask, sessionTask)
+
             let byUid = Dictionary(uniqueKeysWithValues: out.map { ($0.uid, $0) })
-            let ordered = session.cardUids.compactMap { byUid[$0] }
-            cards = ordered
-                .map(Flashcard.init(cardOut:))
+            let sessionCards = session.cardUids.compactMap { byUid[$0] }
+
+            // Due cards first (in their due-date order), then the rest of the
+            // session's cards filled in weakest-topic-first.
+            let dueUids = Set(due.map(\.questionUid))
+            let dueOrder = Dictionary(uniqueKeysWithValues: due.enumerated().map { ($1.questionUid, $0) })
+            let dueCards = sessionCards
+                .filter { dueUids.contains($0.uid) }
+                .sorted { (dueOrder[$0.uid] ?? .max) < (dueOrder[$1.uid] ?? .max) }
+            let remainingCards = sessionCards
+                .filter { !dueUids.contains($0.uid) }
                 .sorted { BKTStore.pKnow(for: $0.topicPath) < BKTStore.pKnow(for: $1.topicPath) }
+
+            cards = (dueCards + remainingCards).map(Flashcard.init(cardOut:))
             sessionId = session.sessionId
             currentIndex = 0
         } catch {
@@ -68,11 +80,12 @@ final class FlashcardViewModel: ObservableObject {
     func rateCurrentCard(_ rating: FlashcardRating) {
         guard let card = currentCard, card.rating == nil else { return }
         guard let index = cards.firstIndex(where: { $0.uid == card.uid }) else { return }
+        guard let sessionId else { return }
         cards[index].rating = rating
 
         Task {
             do {
-                _ = try await client.logReview(uid: card.uid, rating: rating)
+                _ = try await client.logReview(uid: card.uid, sessionId: sessionId, rating: rating)
                 if index == cards.count - 1 {
                     await finishSession()
                 }
