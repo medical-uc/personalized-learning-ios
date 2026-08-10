@@ -109,7 +109,7 @@ final class QuizViewModel: ObservableObject {
         }
     }
 
-    func selectOption(_ optionIndex: Int, confidence: ConfidenceLevel?) {
+    func selectOption(_ optionIndex: Int) {
         guard var question = currentQuestion, question.selectedIndex == nil else { return }
         question.selectedIndex = optionIndex
         questions[currentIndex] = question
@@ -120,17 +120,14 @@ final class QuizViewModel: ObservableObject {
 
         Task {
             await checkAnswer(optionIndex: optionIndex, questionID: questionID)
-            if let confidence {
-                await logAttempt(optionIndex: optionIndex, questionID: questionID, confidence: confidence)
-            }
         }
     }
 
-    func confirmConfidence(_ confidence: ConfidenceLevel) {
+    /// Logs the current question's attempt — called once the student taps Next/Finish,
+    /// so both their confidence and next-review choice are captured in a single write.
+    func logCurrentAnswer(confidence: ConfidenceLevel, nextReviewDays: Int?) async {
         guard let question = currentQuestion, let selectedIndex = question.selectedIndex, !question.isLogged else { return }
-        Task {
-            await logAttempt(optionIndex: selectedIndex, questionID: question.id, confidence: confidence)
-        }
+        await logAttempt(optionIndex: selectedIndex, questionID: question.id, confidence: confidence, nextReviewDays: nextReviewDays)
     }
 
     private func checkAnswer(optionIndex: Int, questionID: String) async {
@@ -147,7 +144,7 @@ final class QuizViewModel: ObservableObject {
         }
     }
 
-    private func logAttempt(optionIndex: Int, questionID: String, confidence: ConfidenceLevel) async {
+    private func logAttempt(optionIndex: Int, questionID: String, confidence: ConfidenceLevel, nextReviewDays: Int?) async {
         guard let index = questions.firstIndex(where: { $0.id == questionID }), !questions[index].isLogged else { return }
         guard let sessionId else { return }
         isSubmitting = true
@@ -156,15 +153,17 @@ final class QuizViewModel: ObservableObject {
         let timeTaken = answerTimeTaken[questionID] ?? 0
 
         do {
-            _ = try await client.logAttempt(
+            let result = try await client.logAttempt(
                 uid: questionID,
                 sessionId: sessionId,
                 selectedIndex: optionIndex,
                 confidence: confidence.apiValue,
-                timeTakenSeconds: timeTaken
+                timeTakenSeconds: timeTaken,
+                nextReviewDays: nextReviewDays
             )
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].isLogged = true
+            questions[index].nextReviewAt = result.nextReviewAt
             answerTimeTaken.removeValue(forKey: questionID)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription

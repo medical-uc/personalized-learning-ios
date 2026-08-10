@@ -42,6 +42,7 @@ struct QuizQuestion: Identifiable {
     var correctIndex: Int?
     var selectedIndex: Int?
     var isLogged = false
+    var nextReviewAt: Date? = nil
     let explanationTitle: String
     var explanationBody: String
     let reference: String

@@ -222,22 +222,26 @@ struct LogAttemptRequest: Encodable {
     let selectedIndex: Int
     let confidence: String
     let timeTakenSeconds: Double
+    let nextReviewDays: Int?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case selectedIndex = "selected_index"
         case confidence
         case timeTakenSeconds = "time_taken_seconds"
+        case nextReviewDays = "next_review_days"
     }
 }
 
 struct LogAttemptResponse: Decodable {
     let eventId: String
     let correct: Bool
+    let nextReviewAt: Date
 
     enum CodingKeys: String, CodingKey {
         case eventId = "event_id"
         case correct
+        case nextReviewAt = "next_review_at"
     }
 }
 
@@ -615,13 +619,13 @@ final class APIClient {
         )
     }
 
-    func logAttempt(uid: String, sessionId: String, selectedIndex: Int, confidence: String, timeTakenSeconds: Double) async throws -> LogAttemptResponse {
+    func logAttempt(uid: String, sessionId: String, selectedIndex: Int, confidence: String, timeTakenSeconds: Double, nextReviewDays: Int? = nil) async throws -> LogAttemptResponse {
         guard let token = SessionManager.token else {
             throw APIError.server("You must be signed in to submit an answer.")
         }
         return try await send(
             path: "quiz/questions/\(uid)/log",
-            body: LogAttemptRequest(sessionId: sessionId, selectedIndex: selectedIndex, confidence: confidence, timeTakenSeconds: timeTakenSeconds),
+            body: LogAttemptRequest(sessionId: sessionId, selectedIndex: selectedIndex, confidence: confidence, timeTakenSeconds: timeTakenSeconds, nextReviewDays: nextReviewDays),
             expectedStatus: 200,
             token: token
         )

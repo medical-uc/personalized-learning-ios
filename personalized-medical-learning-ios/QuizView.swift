@@ -14,6 +14,7 @@ struct QuizView: View {
 
     @StateObject private var viewModel: QuizViewModel
     @State private var confidenceSelection: ConfidenceLevel?
+    @State private var nextReviewSelection: NextReviewOption?
     @State private var resultSummary: QuizResultSummary?
     @State private var showExitConfirm = false
 
@@ -63,18 +64,22 @@ struct QuizView: View {
                         isNextEnabled: confidenceSelection != nil,
                         isReviewModeEnabled: viewModel.isReviewModeEnabled,
                         confidenceSelection: $confidenceSelection,
-                        onSelectOption: { viewModel.selectOption($0, confidence: confidenceSelection) },
+                        nextReviewSelection: $nextReviewSelection,
+                        onSelectOption: { viewModel.selectOption($0) },
                         onPrevious: { viewModel.goToPrevious() },
                         onNext: {
-                            if viewModel.isLastQuestion {
-                                let summary = viewModel.resultSummary
-                                Task {
+                            guard let confidenceSelection else { return }
+                            let isLastQuestion = viewModel.isLastQuestion
+                            let days = nextReviewSelection?.rawValue
+                            Task {
+                                await viewModel.logCurrentAnswer(confidence: confidenceSelection, nextReviewDays: days)
+                                if isLastQuestion {
                                     await viewModel.finishQuiz()
                                     onProgressChange(false)
-                                    resultSummary = summary
+                                    resultSummary = viewModel.resultSummary
+                                } else {
+                                    viewModel.goToNext()
                                 }
-                            } else {
-                                viewModel.goToNext()
                             }
                         }
                     )
@@ -102,12 +107,8 @@ struct QuizView: View {
         }
         .onChange(of: viewModel.currentIndex) {
             confidenceSelection = nil
+            nextReviewSelection = nil
             viewModel.onQuestionAppear()
-        }
-        .onChange(of: confidenceSelection) {
-            if let confidenceSelection {
-                viewModel.confirmConfidence(confidenceSelection)
-            }
         }
         .onDisappear {
             viewModel.stopTimer()

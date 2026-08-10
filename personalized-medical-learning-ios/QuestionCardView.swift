@@ -11,6 +11,7 @@ struct QuestionCardView: View {
     var isNextEnabled: Bool = true
     var isReviewModeEnabled: Bool = true
     @Binding var confidenceSelection: ConfidenceLevel?
+    @Binding var nextReviewSelection: NextReviewOption?
     var onSelectOption: (Int) -> Void = { _ in }
     var onPrevious: () -> Void = {}
     var onNext: () -> Void = {}
@@ -28,6 +29,9 @@ struct QuestionCardView: View {
                     ExplanationCard(question: question)
                 }
                 ConfidenceSelectorView(selection: $confidenceSelection)
+                if confidenceSelection != nil {
+                    NextReviewSelectorView(selection: $nextReviewSelection)
+                }
             }
 
             footer
@@ -223,7 +227,7 @@ private struct ExplanationCard: View {
 
 #Preview {
     ScrollView {
-        QuestionCardView(question: QuizData.sampleQuestion, confidenceSelection: .constant(.unsure))
+        QuestionCardView(question: QuizData.sampleQuestion, confidenceSelection: .constant(.unsure), nextReviewSelection: .constant(nil))
             .padding()
     }
     .background(Theme.bg)
