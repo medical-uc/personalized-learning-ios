@@ -11,6 +11,7 @@ struct DashboardView: View {
 
     @StateObject private var streakViewModel = StreakViewModel()
     @StateObject private var nudgeViewModel = NudgeViewModel()
+    @State private var showBrokenStreakSheet = false
 
     var body: some View {
         ScrollView {
@@ -26,7 +27,11 @@ struct DashboardView: View {
                 }
 
                 DashboardTopCardsLayout {
-                    DayStreakCard(currentStreak: streakViewModel.currentStreak, weekActivity: streakViewModel.weekActivity)
+                    DayStreakCard(
+                        currentStreak: streakViewModel.currentStreak,
+                        weekActivity: streakViewModel.weekActivity,
+                        brokenStreakLength: streakViewModel.brokenStreakLength
+                    )
                 } focusAreas: {
                     FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
                 }
@@ -38,7 +43,58 @@ struct DashboardView: View {
         .task {
             await streakViewModel.loadStreak()
             await nudgeViewModel.loadNudge()
+            if streakViewModel.brokenStreakLength != nil {
+                showBrokenStreakSheet = true
+            }
         }
+        .sheet(isPresented: $showBrokenStreakSheet) {
+            if let brokenStreakLength = streakViewModel.brokenStreakLength {
+                StreakBrokenView(streakLength: brokenStreakLength)
+            }
+        }
+    }
+}
+
+private struct StreakBrokenView: View {
+    let streakLength: Int
+    @Environment(\.dismiss) private var dismiss
+
+    private var dayWord: String { streakLength == 1 ? "day" : "days" }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle().fill(Color.orange.opacity(0.12)).frame(width: 88, height: 88)
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color.orange)
+            }
+            .padding(.top, 8)
+
+            VStack(spacing: 8) {
+                Text("Streak broken")
+                    .font(.title2.bold())
+                    .foregroundStyle(Theme.dark)
+                Text("Your \(streakLength)-\(dayWord) streak ended. Answer a quiz question or review a flashcard today to start a new one.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button(action: { dismiss() }) {
+                Text("Got it")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Theme.dark)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(24)
+        .presentationDetents([.height(320)])
     }
 }
 
@@ -111,6 +167,7 @@ private struct DueForReviewCard: View {
 private struct DayStreakCard: View {
     let currentStreak: Int
     let weekActivity: [Bool]
+    var brokenStreakLength: Int? = nil
 
     /// Index of today within the Monday-first week row, so it can be ringed like the
     /// old static mock did — weekActivity[weekday] is guaranteed populated by the
@@ -154,9 +211,20 @@ private struct DayStreakCard: View {
                 }
             }
 
-            Text(currentStreak > 0 ? "Keep it up! You're doing great!" : "Answer a quiz question or review a flashcard today to start a streak.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if let brokenStreakLength, currentStreak == 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.slash.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                    Text("Your \(brokenStreakLength)-day streak ended. Start a new one today.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Text(currentStreak > 0 ? "Keep it up! You're doing great!" : "Answer a quiz question or review a flashcard today to start a streak.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(18)
         .background(Color.white)
@@ -288,4 +356,11 @@ struct SectionHeader: View {
 
 #Preview {
     RootView()
+}
+
+#Preview("Streak Broken") {
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            StreakBrokenView(streakLength: 12)
+        }
 }
