@@ -205,7 +205,7 @@ private struct NavigationCard: View {
 
 #Preview {
     ScrollView {
-        FlashcardSidePanelView(viewModel: FlashcardViewModel(topicPath: "cardiology"))
+        FlashcardSidePanelView(viewModel: FlashcardViewModel())
             .padding()
             .frame(width: 340)
     }

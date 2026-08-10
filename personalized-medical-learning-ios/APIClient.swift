@@ -599,8 +599,8 @@ final class APIClient {
         return response.items
     }
 
-    func getCards(topicPath: String) async throws -> [FlashcardOut] {
-        try await get(path: "flashcards/topics/\(topicPath)/cards")
+    func getAllCards() async throws -> [FlashcardOut] {
+        try await get(path: "flashcards/cards")
     }
 
     func revealCard(uid: String) async throws -> FlashcardRevealResponse {

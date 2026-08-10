@@ -14,7 +14,6 @@ struct RootView: View {
     @State private var activeReviewModeEnabled: Bool = true
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
-    @State private var flashcardTopicPath: String?
     @State private var preselectedSetupTopicPath: String?
     @State private var energyToastAmount: Int?
 
@@ -69,15 +68,7 @@ struct RootView: View {
                         )
                     }
                 case .flashcards:
-                    if let flashcardTopicPath {
-                        FlashcardView(topicPath: flashcardTopicPath, onBack: { selection = .dashboard })
-                    } else {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .task {
-                                flashcardTopicPath = (try? await APIClient.shared.listTopics())?.first
-                            }
-                    }
+                    FlashcardView(onBack: { selection = .dashboard })
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })
                 case .bookmarks:

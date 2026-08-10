@@ -6,26 +6,16 @@
 import SwiftUI
 
 struct FlashcardView: View {
-    var topicPath: String
     var onBack: () -> Void = {}
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @StateObject private var viewModel: FlashcardViewModel
+    @StateObject private var viewModel = FlashcardViewModel()
     @State private var isFlipped = false
-
-    init(topicPath: String, onBack: @escaping () -> Void = {}) {
-        self.topicPath = topicPath
-        self.onBack = onBack
-        _viewModel = StateObject(wrappedValue: FlashcardViewModel(topicPath: topicPath))
-    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FlashcardHeaderView(onBack: onBack)
-                if let card = viewModel.currentCard {
-                    FlashcardTopicLabel(topicTag: card.topicTag)
-                }
+                FlashcardHeaderView(viewModel: viewModel)
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -90,15 +80,22 @@ private struct FlashcardErrorView: View {
 }
 
 private struct FlashcardHeaderView: View {
-    var onBack: () -> Void
+    @ObservedObject var viewModel: FlashcardViewModel
 
     @State private var isProgressPresented = false
 
     var body: some View {
         HStack {
-            Text("Flashcards")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.dark)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Flashcards")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.dark)
+                if !viewModel.cards.isEmpty {
+                    Text("Card \(viewModel.currentIndex + 1) of \(viewModel.cards.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Spacer()
 
@@ -137,23 +134,6 @@ private struct FlashcardHeaderView: View {
             }
         }
         .padding(.top, 24)
-    }
-}
-
-private struct FlashcardTopicLabel: View {
-    let topicTag: [String]
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder")
-            Text(topicTag.joined(separator: " › "))
-                .font(.subheadline.weight(.medium))
-        }
-        .foregroundStyle(Theme.dark)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

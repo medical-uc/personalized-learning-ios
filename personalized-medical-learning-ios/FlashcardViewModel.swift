@@ -14,11 +14,9 @@ final class FlashcardViewModel: ObservableObject {
     @Published private(set) var isRevealing = false
     @Published var errorMessage: String?
 
-    let topicPath: String
     private let client: APIClient
 
-    init(topicPath: String, client: APIClient = .shared) {
-        self.topicPath = topicPath
+    init(client: APIClient = .shared) {
         self.client = client
     }
 
@@ -34,7 +32,7 @@ final class FlashcardViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let out = try await client.getCards(topicPath: topicPath)
+            let out = try await client.getAllCards()
             cards = out.map(Flashcard.init(cardOut:))
             currentIndex = 0
         } catch {
