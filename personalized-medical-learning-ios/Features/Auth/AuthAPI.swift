@@ -36,7 +36,7 @@ extension APIClient {
         }
 
         guard httpResponse.statusCode == 204 else {
-            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, action: "Logout")
+            throw try makeServerError(data: data, statusCode: httpResponse.statusCode, headers: httpResponse)
         }
     }
 

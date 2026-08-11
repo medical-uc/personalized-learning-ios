@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var preselectedSetupTopicPath: String?
     @State private var energyToastAmount: Int?
     @State private var isFlashcardSessionStarted = false
+    @State private var isOffline = !Reachability.shared.isOnline
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
@@ -118,13 +119,20 @@ struct RootView: View {
             Text("Your progress on this quiz will be lost if you leave now.")
         }
         .overlay(alignment: .top) {
-            if let energyToastAmount {
-                EnergyAwardedToast(amount: energyToastAmount)
-                    .padding(.top, 16)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 8) {
+                if isOffline {
+                    OfflineBanner()
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if let energyToastAmount {
+                    EnergyAwardedToast(amount: energyToastAmount)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
+            .padding(.top, 16)
         }
         .animation(.spring(duration: 0.35), value: energyToastAmount)
+        .animation(.spring(duration: 0.35), value: isOffline)
         .onReceive(NotificationCenter.default.publisher(for: .energyAwarded)) { notification in
             guard let amount = notification.userInfo?[EnergyAwardedKey.amount] as? Int else { return }
             energyToastAmount = amount
@@ -134,6 +142,26 @@ struct RootView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .networkStatusChanged)) { notification in
+            isOffline = (notification.userInfo?[Reachability.isOnlineKey] as? Bool).map { !$0 } ?? isOffline
+        }
+    }
+}
+
+private struct OfflineBanner: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "wifi.slash")
+                .foregroundStyle(.white)
+            Text("You're offline")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Color.red.opacity(0.85))
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 }
 
