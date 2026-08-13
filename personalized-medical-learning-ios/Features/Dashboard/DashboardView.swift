@@ -12,6 +12,7 @@ struct DashboardView: View {
     @StateObject private var streakViewModel = StreakViewModel()
     @StateObject private var nudgeViewModel = NudgeViewModel()
     @State private var showBrokenStreakSheet = false
+    @State private var showStreakCalendar = false
 
     var body: some View {
         ScrollView {
@@ -32,6 +33,7 @@ struct DashboardView: View {
                         weekActivity: streakViewModel.weekActivity,
                         brokenStreakLength: streakViewModel.brokenStreakLength
                     )
+                    .onTapGesture { showStreakCalendar = true }
                 } focusAreas: {
                     FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
                 }
@@ -53,6 +55,12 @@ struct DashboardView: View {
             }
             .presentationBackground(Color.clear)
             .interactiveDismissDisabled()
+        }
+        .sheet(isPresented: $showStreakCalendar) {
+            StreakCalendarView(
+                currentStreak: streakViewModel.currentStreak,
+                activityDates: streakViewModel.activityDates
+            )
         }
     }
 }

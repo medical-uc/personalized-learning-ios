@@ -87,11 +87,16 @@ struct StreakResponse: Decodable {
     let currentStreak: Int
     let previousStreak: Int
     let weekActivity: [Bool]
+    /// Plain "YYYY-MM-DD" strings, not datetimes — decoded as String and parsed
+    /// separately since APIClient's dateDecodingStrategy only handles datetime formats
+    /// (see APIClient.swift's decoder init), not bare dates.
+    let activityDates: [String]
 
     enum CodingKeys: String, CodingKey {
         case currentStreak = "current_streak"
         case previousStreak = "previous_streak"
         case weekActivity = "week_activity"
+        case activityDates = "activity_dates"
     }
 }
 
