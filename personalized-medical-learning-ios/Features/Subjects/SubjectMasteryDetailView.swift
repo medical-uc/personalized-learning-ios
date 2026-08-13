@@ -13,6 +13,7 @@ struct SubjectMasteryDetailView: View {
     let subject: StudySubject
     var onSelectTopic: (Topic) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
+    @State private var showInfo = false
 
     private var level: MasteryLevel { MasteryLevel(pKnow: subject.progress) }
 
@@ -53,13 +54,25 @@ struct SubjectMasteryDetailView: View {
                 .font(.system(size: 44, weight: .bold))
                 .foregroundStyle(level.tint)
 
-            Text(level.label)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(level.tint)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(level.tint.opacity(0.12))
-                .clipShape(Capsule())
+            HStack(spacing: 6) {
+                Text(level.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(level.tint)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(level.tint.opacity(0.12))
+                    .clipShape(Capsule())
+
+                Button(action: { showInfo = true }) {
+                    Image(systemName: "info.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showInfo) {
+                    MasteryInfoView()
+                }
+            }
 
             Text("This is the average knowledge level across all \(subject.topics.count) topics in \(subject.name) — not its own separate score. Each topic keeps its own BKT estimate; this number just summarizes them.")
                 .font(.caption)
@@ -143,6 +156,49 @@ struct SubjectMasteryDetailView: View {
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct MasteryInfoView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("How this score works")
+                .font(.headline)
+                .foregroundStyle(Theme.dark)
+
+            Text("This is an estimate of how well you actually know a topic — not just your last quiz grade.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 10) {
+                InfoBullet(text: "It weighs your answer by how confident you said you were — a confident right answer counts more than a lucky guess.")
+                InfoBullet(text: "A confident wrong answer counts as a real gap, not a slip — it moves your score down more than an unsure or guessing miss.")
+                InfoBullet(text: "It updates a little after every question you answer, correct or not.")
+            }
+
+            Text("Topics needing the most work surface first so you know what to practice next.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(20)
+        .frame(width: 320)
+    }
+}
+
+private struct InfoBullet: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(Theme.dark.opacity(0.5))
+                .frame(width: 5, height: 5)
+                .padding(.top, 6)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(Theme.dark)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
