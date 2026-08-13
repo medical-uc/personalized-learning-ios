@@ -9,7 +9,6 @@ struct MasteryView: View {
     var onBack: () -> Void = {}
 
     @StateObject private var viewModel = MasteryViewModel()
-    @State private var showInfo = false
     @State private var selectedEntry: MasteryEntry?
 
     var body: some View {
@@ -57,66 +56,12 @@ struct MasteryView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text("Knowledge Level").font(.largeTitle.bold())
-                Button(action: { showInfo = true }) {
-                    Image(systemName: "info.circle")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showInfo) {
-                    MasteryInfoView()
-                }
-            }
+            Text("Knowledge Level").font(.largeTitle.bold())
             Text("Areas to focus on first, based on your quiz performance.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .padding(.top, 24)
-    }
-}
-
-private struct MasteryInfoView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("How this score works")
-                .font(.headline)
-                .foregroundStyle(Theme.dark)
-
-            Text("This is an estimate of how well you actually know a topic — not just your last quiz grade.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 10) {
-                InfoBullet(text: "It weighs your answer by how confident you said you were — a confident right answer counts more than a lucky guess.")
-                InfoBullet(text: "A confident wrong answer counts as a real gap, not a slip — it moves your score down more than an unsure or guessing miss.")
-                InfoBullet(text: "It updates a little after every question you answer, correct or not.")
-            }
-
-            Text("Topics needing the most work surface first so you know what to practice next.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(20)
-        .frame(width: 320)
-    }
-}
-
-private struct InfoBullet: View {
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(Theme.dark.opacity(0.5))
-                .frame(width: 5, height: 5)
-                .padding(.top, 6)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(Theme.dark)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 }
 
