@@ -11,6 +11,12 @@ struct SubjectsView: View {
     @StateObject private var viewModel = SubjectsViewModel()
     @State private var selectedSubjectID: String?
     @State private var searchText = ""
+    @State private var masterySubjectID: String?
+
+    private var masterySubject: StudySubject? {
+        guard let masterySubjectID else { return nil }
+        return viewModel.subjects.first { $0.id == masterySubjectID }
+    }
 
     private var selectedSubject: StudySubject? {
         guard let selectedSubjectID else { return nil }
@@ -52,6 +58,15 @@ struct SubjectsView: View {
         .task {
             await viewModel.loadSubjects()
         }
+        .sheet(item: Binding<StudySubject?>(
+            get: { masterySubject },
+            set: { masterySubjectID = $0?.id }
+        )) { subject in
+            SubjectMasteryDetailView(subject: subject, onSelectTopic: { _ in
+                masterySubjectID = nil
+                selectedSubjectID = subject.id
+            })
+        }
     }
 
     @ViewBuilder
@@ -75,7 +90,7 @@ struct SubjectsView: View {
         } else {
             VStack(spacing: 14) {
                 ForEach(filteredSubjects) { subject in
-                    SubjectRow(subject: subject)
+                    SubjectRow(subject: subject, onTapMastery: { masterySubjectID = subject.id })
                         .onTapGesture { selectedSubjectID = subject.id }
                 }
             }
@@ -147,6 +162,9 @@ private struct SubjectSearchField: View {
 
 private struct SubjectRow: View {
     let subject: StudySubject
+    var onTapMastery: () -> Void = {}
+
+    private var level: MasteryLevel { MasteryLevel(pKnow: subject.progress) }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -162,9 +180,19 @@ private struct SubjectRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(subject.name).font(.subheadline.bold())
 
-                Text("\(Int(subject.progress * 100))%")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                Button(action: onTapMastery) {
+                    HStack(spacing: 3) {
+                        Text("\(Int((subject.progress * 100).rounded()))%")
+                        Image(systemName: "info.circle")
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(level.tint)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(level.tint.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
 
                 Text("\(subject.topics.count) topics · \(subject.questionCount) questions · \(subject.flashcardCount) flashcards")
                     .font(.caption2)
