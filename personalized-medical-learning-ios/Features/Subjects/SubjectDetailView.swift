@@ -9,10 +9,15 @@ struct SubjectDetailView: View {
     let subject: StudySubject
     var onBack: () -> Void = {}
 
+    @State private var selectedTopic: Topic?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             HeroCard(subject: subject, onBack: onBack)
-            TopicsSection(subject: subject)
+            TopicsSection(subject: subject, onSelectTopic: { selectedTopic = $0 })
+        }
+        .sheet(item: $selectedTopic) { topic in
+            MasteryDetailView(entry: MasteryEntry(from: topic))
         }
     }
 }
@@ -106,6 +111,7 @@ private struct StatTile: View {
 
 private struct TopicsSection: View {
     let subject: StudySubject
+    var onSelectTopic: (Topic) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -120,7 +126,9 @@ private struct TopicsSection: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(subject.topics) { topic in
-                        TopicRow(topic: topic)
+                        TopicRow(topic: topic) {
+                            onSelectTopic(topic)
+                        }
                     }
                 }
             }
@@ -133,10 +141,18 @@ private struct TopicsSection: View {
 
 private struct TopicRow: View {
     let topic: Topic
+    var onTap: () -> Void = {}
 
     private var level: MasteryLevel { MasteryLevel(pKnow: topic.progress) }
 
     var body: some View {
+        Button(action: onTap) {
+            topicRowContent
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var topicRowContent: some View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()

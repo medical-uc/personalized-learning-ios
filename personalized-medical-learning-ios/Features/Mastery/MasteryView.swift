@@ -209,7 +209,7 @@ private struct MasteryErrorView: View {
     }
 }
 
-private struct MasteryDetailView: View {
+struct MasteryDetailView: View {
     let entry: MasteryEntry
     @Environment(\.dismiss) private var dismiss
     @State private var streakConfidence: ConfidenceLevel = .unsure

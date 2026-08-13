@@ -54,6 +54,19 @@ struct MasteryEntry: Identifiable {
     }
 }
 
+extension MasteryEntry {
+    /// Builds the same entry the Knowledge Level tab uses, from a Subjects-tab Topic —
+    /// so tapping a topic row on the subject page opens the identical breakdown sheet
+    /// (history, confidence rules, streak simulator) instead of a separate view.
+    /// updatedAt is re-read from BKTStore since Topic doesn't carry it.
+    init(from topic: Topic) {
+        self.id = topic.id
+        self.topicPath = topic.id
+        self.pKnow = topic.progress
+        self.updatedAt = BKTStore.updatedAt(for: topic.id) ?? Date()
+    }
+}
+
 struct DueReviewItem: Decodable {
     let questionUid: String
     let streak: Int
