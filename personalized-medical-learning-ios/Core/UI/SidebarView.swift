@@ -75,13 +75,6 @@ private struct ProfileFooter: View {
                 Text(SessionManager.fullName ?? "Student")
                     .font(.subheadline.bold())
 
-                Text("Expert")
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
-                    .background(Theme.mint)
-                    .clipShape(Capsule())
-
                 HStack(spacing: 6) {
                     Image(systemName: "bolt.fill").foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 0) {
@@ -95,17 +88,6 @@ private struct ProfileFooter: View {
             .frame(maxWidth: .infinity)
             .background(Theme.bg)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-
-            HStack {
-                Image(systemName: "gift.fill")
-                Text("Invite Friends").font(.subheadline.weight(.medium))
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Theme.bg)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .task {
             energyBalance = try? await APIClient.shared.getEnergy().energy
