@@ -69,13 +69,6 @@ struct StudySubject: Identifiable {
     }
 }
 
-enum SubjectTab: String, CaseIterable, Identifiable {
-    case allSubjects = "All Subjects"
-    case myProgress = "My Progress"
-
-    var id: String { rawValue }
-}
-
 struct TopicListResponse: Decodable {
     let topics: [String]
 }

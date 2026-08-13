@@ -10,12 +10,23 @@ struct SubjectsView: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var viewModel = SubjectsViewModel()
-    @State private var selectedTab: SubjectTab = .allSubjects
     @State private var selectedSubjectID: String?
+    @State private var searchText = ""
+    @State private var selectedLevelFilter: MasteryLevel?
 
     private var selectedSubject: StudySubject? {
         guard let selectedSubjectID else { return nil }
         return viewModel.subjects.first { $0.id == selectedSubjectID }
+    }
+
+    private var filteredSubjects: [StudySubject] {
+        viewModel.subjects.filter { subject in
+            let matchesSearch = searchText.isEmpty
+                || subject.name.localizedCaseInsensitiveContains(searchText)
+            let matchesLevel = selectedLevelFilter == nil
+                || MasteryLevel(pKnow: subject.progress) == selectedLevelFilter
+            return matchesSearch && matchesLevel
+        }
     }
 
     var body: some View {
@@ -65,7 +76,9 @@ struct SubjectsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
-                SubjectTabBar(selectedTab: $selectedTab)
+                SubjectSearchField(text: $searchText)
+
+                MasteryLevelFilterBar(selectedLevel: $selectedLevelFilter)
 
                 content
             }
@@ -84,9 +97,15 @@ struct SubjectsView: View {
             SubjectsErrorView(message: errorMessage) {
                 Task { await viewModel.loadSubjects() }
             }
+        } else if filteredSubjects.isEmpty {
+            Text("No subjects match your filters.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 60)
         } else {
             VStack(spacing: 14) {
-                ForEach(viewModel.subjects) { subject in
+                ForEach(filteredSubjects) { subject in
                     SubjectRow(
                         subject: subject,
                         isSelected: subject.id == selectedSubjectID
@@ -142,30 +161,71 @@ private struct SubjectsErrorView: View {
     }
 }
 
-private struct SubjectTabBar: View {
-    @Binding var selectedTab: SubjectTab
+private struct SubjectSearchField: View {
+    @Binding var text: String
 
     var body: some View {
-        HStack(spacing: 24) {
-            ForEach(SubjectTab.allCases) { tab in
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search subjects", text: $text)
+                .textFieldStyle(.plain)
+            if !text.isEmpty {
                 Button {
-                    selectedTab = tab
+                    text = ""
                 } label: {
-                    VStack(spacing: 8) {
-                        Text(tab.rawValue)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selectedTab == tab ? Theme.dark : .secondary)
-                        Rectangle()
-                            .fill(selectedTab == tab ? Theme.dark : Color.clear)
-                            .frame(height: 2)
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.06)))
+    }
+}
+
+private struct MasteryLevelFilterBar: View {
+    @Binding var selectedLevel: MasteryLevel?
+
+    private let levels: [MasteryLevel] = [.needsWork, .developing, .strong]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                FilterChip(label: "All", tint: Theme.dark, isSelected: selectedLevel == nil) {
+                    selectedLevel = nil
+                }
+                ForEach(levels, id: \.self) { level in
+                    FilterChip(label: level.label, tint: level.tint, isSelected: selectedLevel == level) {
+                        selectedLevel = selectedLevel == level ? nil : level
                     }
                 }
             }
-            Spacer()
         }
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.bg).frame(height: 1)
+    }
+}
+
+private struct FilterChip: View {
+    let label: String
+    let tint: Color
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? Color.white : tint)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(isSelected ? tint : tint.opacity(0.12))
+                .clipShape(Capsule())
         }
+        .buttonStyle(.plain)
     }
 }
 
