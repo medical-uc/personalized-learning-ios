@@ -66,8 +66,8 @@ struct QuizView: View {
                         nextReviewSelection: $nextReviewSelection,
                         onSelectOption: { viewModel.selectOption($0) },
                         onPrevious: { viewModel.goToPrevious() },
-                        onCheck: {
-                            Task { await viewModel.checkCurrentAnswer() }
+                        onCheck: { confidence in
+                            Task { await viewModel.checkCurrentAnswer(confidence: confidence) }
                         },
                         onNext: {
                             guard let confidenceSelection else { return }

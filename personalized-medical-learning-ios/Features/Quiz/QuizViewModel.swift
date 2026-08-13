@@ -122,10 +122,13 @@ final class QuizViewModel: ObservableObject {
 
     /// Reveals correct/incorrect + explanation — called once the student taps
     /// "Check Answer" (after picking both an option and a confidence level), not the
-    /// moment they pick an option.
-    func checkCurrentAnswer() async {
+    /// moment they pick an option. confidence feeds BKTStore directly here (rather than
+    /// waiting for logCurrentAnswer's server log) since p_slip/p_guess are now
+    /// confidence-conditional and this is the first point both correct/incorrect and
+    /// confidence are both known.
+    func checkCurrentAnswer(confidence: ConfidenceLevel) async {
         guard let question = currentQuestion, let selectedIndex = question.selectedIndex, question.correctIndex == nil else { return }
-        await checkAnswer(optionIndex: selectedIndex, questionID: question.id)
+        await checkAnswer(optionIndex: selectedIndex, questionID: question.id, confidence: confidence)
     }
 
     /// Logs the current question's attempt — called once the student taps Next/Finish,
@@ -135,13 +138,13 @@ final class QuizViewModel: ObservableObject {
         await logAttempt(optionIndex: selectedIndex, questionID: question.id, confidence: confidence, nextReviewDays: nextReviewDays)
     }
 
-    private func checkAnswer(optionIndex: Int, questionID: String) async {
+    private func checkAnswer(optionIndex: Int, questionID: String, confidence: ConfidenceLevel) async {
         do {
             let result = try await client.checkAnswer(uid: questionID, selectedIndex: optionIndex)
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].correctIndex = result.correctIndex
             questions[index].explanationBody = result.explanation
-            BKTStore.record(topicPath: questions[index].topicPath, correct: result.correct)
+            BKTStore.record(topicPath: questions[index].topicPath, correct: result.correct, confidence: confidence)
         } catch {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].selectedIndex = nil

@@ -89,8 +89,8 @@ private struct MasteryInfoView: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 10) {
-                InfoBullet(text: "It accounts for lucky guesses, so guessing right doesn't inflate your score.")
-                InfoBullet(text: "It accounts for careless mistakes, so one slip doesn't tank a topic you know well.")
+                InfoBullet(text: "It weighs your answer by how confident you said you were — a confident right answer counts more than a lucky guess.")
+                InfoBullet(text: "A confident wrong answer counts as a real gap, not a slip — it moves your score down more than an unsure or guessing miss.")
                 InfoBullet(text: "It updates a little after every question you answer, correct or not.")
             }
 
@@ -212,6 +212,7 @@ private struct MasteryErrorView: View {
 private struct MasteryDetailView: View {
     let entry: MasteryEntry
     @Environment(\.dismiss) private var dismiss
+    @State private var streakConfidence: ConfidenceLevel = .unsure
 
     private var lastPracticed: String {
         let formatter = RelativeDateTimeFormatter()
@@ -265,6 +266,8 @@ private struct MasteryDetailView: View {
                     .background(Theme.mint.opacity(0.4))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
 
+                    attemptHistory
+
                     bktBreakdown
 
                     HStack(spacing: 8) {
@@ -295,12 +298,14 @@ private struct MasteryDetailView: View {
 
     /// Chains simulate() n times so each row reflects n *consecutive* answers of the
     /// same kind, not n independent single-attempt previews — that's the "how many
-    /// questions to get there" the tiles were missing.
+    /// questions to get there" the tiles were missing. confidence is driven by the
+    /// picker below so a student can see e.g. "5 confident-correct in a row" vs.
+    /// "5 guessing-correct in a row" move p_know very differently.
     private func streak(correct: Bool, count: Int) -> [MasteryLevel] {
         var results: [MasteryLevel] = []
         var current = entry.pKnow
         for _ in 0..<count {
-            current = BKTStore.simulate(current: current, correct: correct)
+            current = BKTStore.simulate(current: current, correct: correct, confidence: streakConfidence)
             results.append(MasteryLevel(pKnow: current))
         }
         return results
@@ -309,18 +314,63 @@ private struct MasteryDetailView: View {
     private var correctStreak: [MasteryLevel] { streak(correct: true, count: 5) }
     private var incorrectStreak: [MasteryLevel] { streak(correct: false, count: 5) }
 
+    private var recentHistory: [BKTAttemptRecord] { BKTStore.history(for: entry.topicPath) }
+
+    /// Real evidence trail for this topic, most recent first — each row is an actual
+    /// graded attempt, not a simulation. Empty state covers a topic with a p_know from
+    /// before this log existed, or genuinely zero attempts (cold-start default).
+    private var attemptHistory: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Recent attempts")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.dark)
+
+            if recentHistory.isEmpty {
+                Text("No attempt history recorded for this topic yet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(recentHistory) { record in
+                        AttemptHistoryRow(record: record)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.06)))
+    }
+
     private var bktBreakdown: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("How this score is calculated")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.dark)
 
-            Text("Every topic starts at Needs Work. Each time you answer a question, your level can move up or down depending on whether you got it right — while also accounting for lucky guesses and careless mistakes so one answer doesn't swing it too far.")
+            Text("Every topic starts at Needs Work. Each time you answer a question, your level moves depending on whether you got it right — and on how confident you said you were. A confident right answer counts as strong evidence you know it; a confident wrong answer counts as a real gap, not a slip. A guess barely moves the needle either way, since it's close to a coin flip regardless of outcome.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            VStack(alignment: .leading, spacing: 6) {
+                ConfidenceRuleRow(level: .confident, note: "trusted as real evidence, right or wrong")
+                ConfidenceRuleRow(level: .unsure, note: "moderate evidence either way")
+                ConfidenceRuleRow(level: .guessing, note: "close to a coin flip — barely moves your score")
+            }
+
             Divider()
+
+            Text("Preview: answering with this confidence")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Picker("Confidence", selection: $streakConfidence) {
+                ForEach(ConfidenceLevel.allCases) { level in
+                    Text(level.rawValue).tag(level)
+                }
+            }
+            .pickerStyle(.segmented)
 
             Text("If your next questions go correct")
                 .font(.caption.weight(.semibold))
@@ -332,7 +382,7 @@ private struct MasteryDetailView: View {
                 .foregroundStyle(.secondary)
             StreakRow(values: incorrectStreak)
 
-            Text("Each column assumes you keep answering the same way in a row, starting from your current level.")
+            Text("Each column assumes you keep answering the same way, with the confidence selected above, starting from your current level.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -340,6 +390,68 @@ private struct MasteryDetailView: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.06)))
+    }
+}
+
+private struct ConfidenceRuleRow: View {
+    let level: ConfidenceLevel
+    let note: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: level.icon)
+                .font(.caption)
+                .foregroundStyle(level.tint)
+                .frame(width: 16)
+            Text(level.rawValue)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.dark)
+            Text("— \(note)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct AttemptHistoryRow: View {
+    let record: BKTAttemptRecord
+
+    private var timeAgo: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: record.timestamp, relativeTo: Date())
+    }
+
+    private var deltaLabel: String {
+        let percent = Int((record.delta * 100).rounded())
+        return percent >= 0 ? "+\(percent)%" : "\(percent)%"
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: record.correct ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(record.correct ? .green : .red)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: record.confidence.icon)
+                        .font(.caption2)
+                        .foregroundStyle(record.confidence.tint)
+                    Text(record.confidence.rawValue)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.dark)
+                }
+                Text(timeAgo)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(deltaLabel)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(record.delta >= 0 ? .green : .red)
+        }
     }
 }
 

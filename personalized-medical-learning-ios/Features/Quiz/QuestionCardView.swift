@@ -13,7 +13,7 @@ struct QuestionCardView: View {
     @Binding var nextReviewSelection: NextReviewOption?
     var onSelectOption: (Int) -> Void = { _ in }
     var onPrevious: () -> Void = {}
-    var onCheck: () -> Void = {}
+    var onCheck: (ConfidenceLevel) -> Void = { _ in }
     var onNext: () -> Void = {}
 
     private var isLastQuestion: Bool { question.index >= totalQuestions }
@@ -119,7 +119,10 @@ struct QuestionCardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             } else {
-                Button(action: onCheck) {
+                Button {
+                    guard let confidenceSelection else { return }
+                    onCheck(confidenceSelection)
+                } label: {
                     HStack(spacing: 6) {
                         Text("Check Answer")
                         Image(systemName: "checkmark.circle")
