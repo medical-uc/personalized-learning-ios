@@ -10,14 +10,21 @@ struct SubjectDetailView: View {
     var onBack: () -> Void = {}
 
     @State private var selectedTopic: Topic?
+    @State private var showSubjectMastery = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            HeroCard(subject: subject, onBack: onBack)
+            HeroCard(subject: subject, onBack: onBack, onTapMastery: { showSubjectMastery = true })
             TopicsSection(subject: subject, onSelectTopic: { selectedTopic = $0 })
         }
         .sheet(item: $selectedTopic) { topic in
             MasteryDetailView(entry: MasteryEntry(from: topic))
+        }
+        .sheet(isPresented: $showSubjectMastery) {
+            SubjectMasteryDetailView(subject: subject, onSelectTopic: { topic in
+                showSubjectMastery = false
+                selectedTopic = topic
+            })
         }
     }
 }
@@ -25,6 +32,7 @@ struct SubjectDetailView: View {
 private struct HeroCard: View {
     let subject: StudySubject
     var onBack: () -> Void
+    var onTapMastery: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -44,13 +52,19 @@ private struct HeroCard: View {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(spacing: 10) {
                         Text(subject.name).font(.largeTitle.bold())
-                        Text(MasteryLevel(pKnow: subject.progress).label)
+                        Button(action: onTapMastery) {
+                            HStack(spacing: 4) {
+                                Text(MasteryLevel(pKnow: subject.progress).label)
+                                Image(systemName: "info.circle")
+                            }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.dark)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.white)
                             .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     Text("\(subject.masteredConcepts) / \(subject.topics.count) topics mastered")
