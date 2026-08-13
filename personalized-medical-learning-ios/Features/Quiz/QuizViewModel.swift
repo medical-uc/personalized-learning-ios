@@ -144,7 +144,9 @@ final class QuizViewModel: ObservableObject {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].correctIndex = result.correctIndex
             questions[index].explanationBody = result.explanation
-            BKTStore.record(topicPath: questions[index].topicPath, correct: result.correct, confidence: confidence)
+            let topicPath = questions[index].topicPath
+            BKTStore.record(topicPath: topicPath, correct: result.correct, confidence: confidence)
+            syncMastery(topicPath: topicPath)
         } catch {
             guard let index = questions.firstIndex(where: { $0.id == questionID }) else { return }
             questions[index].selectedIndex = nil
@@ -193,12 +195,25 @@ final class QuizViewModel: ObservableObject {
     /// Pushes this session's on-device BKT results (see BKTStore, updated per-answer in
     /// checkAnswer()) up to the server so they survive across devices/reinstalls. Best-effort:
     /// the device's BKTStore is already the source of truth and the student has already seen
-    /// their results, so a sync failure here shouldn't surface as a quiz-ending error.
+    /// their results, so a sync failure here shouldn't surface as a quiz-ending error. Kept as
+    /// a session-end safety net alongside the per-answer sync in checkAnswer(), in case a
+    /// per-answer push was dropped (e.g. offline mid-quiz).
     private func syncMastery() async {
         let topicPaths = Set(questions.map(\.topicPath))
         guard !topicPaths.isEmpty else { return }
         let items = topicPaths.map { MasteryUpdateItem(topicPath: $0, pKnow: BKTStore.pKnow(for: $0)) }
         _ = try? await client.putMastery(items)
+    }
+
+    /// Fire-and-forget push of a single topic's freshly-updated p_know, right after
+    /// checkAnswer() records it — so the server stays current within one answer instead of
+    /// lagging until finishQuiz(). Detached so it never blocks the answer-reveal/Next UI on
+    /// a network roundtrip; failures are silently dropped, same as syncMastery() above.
+    private func syncMastery(topicPath: String) {
+        let item = MasteryUpdateItem(topicPath: topicPath, pKnow: BKTStore.pKnow(for: topicPath))
+        Task {
+            _ = try? await client.putMastery([item])
+        }
     }
 
     func cancelQuiz() async {
