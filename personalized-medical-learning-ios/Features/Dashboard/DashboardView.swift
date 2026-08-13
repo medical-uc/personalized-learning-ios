@@ -7,6 +7,7 @@ import SwiftUI
 
 struct DashboardView: View {
     var onPracticeTopic: (QuizTopic) -> Void = { _ in }
+    var onReviewDue: (NudgePreviewItem) -> Void = { _ in }
 
     @StateObject private var streakViewModel = StreakViewModel()
     @StateObject private var nudgeViewModel = NudgeViewModel()
@@ -22,8 +23,14 @@ struct DashboardView: View {
                     DueForReviewCard(
                         quizDueCount: nudgeViewModel.quizDueCount,
                         flashcardDueCount: nudgeViewModel.flashcardDueCount,
-                        totalDueCount: nudgeViewModel.totalDueCount
+                        totalDueCount: nudgeViewModel.totalDueCount,
+                        soonestDue: nudgeViewModel.soonestDue
                     )
+                    .onTapGesture {
+                        if let soonestDue = nudgeViewModel.soonestDue {
+                            onReviewDue(soonestDue)
+                        }
+                    }
                 }
 
                 DashboardTopCardsLayout {
@@ -187,12 +194,20 @@ private struct DueForReviewCard: View {
     let quizDueCount: Int
     let flashcardDueCount: Int
     let totalDueCount: Int
+    var soonestDue: NudgePreviewItem?
 
     private var subtitle: String {
         var parts: [String] = []
         if quizDueCount > 0 { parts.append("\(quizDueCount) quiz question\(quizDueCount == 1 ? "" : "s")") }
         if flashcardDueCount > 0 { parts.append("\(flashcardDueCount) flashcard\(flashcardDueCount == 1 ? "" : "s")") }
         return parts.joined(separator: " and ") + " due for review."
+    }
+
+    private var soonestLabel: String? {
+        guard let soonestDue else { return nil }
+        let topic = soonestDue.topicPath.components(separatedBy: " > ").last ?? soonestDue.topicPath
+        let kind = soonestDue.source == .quiz ? "Quiz" : "Flashcard"
+        return "Next: \(kind) — \(topic)"
     }
 
     var body: some View {
@@ -212,13 +227,23 @@ private struct DueForReviewCard: View {
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let soonestLabel {
+                    Text(soonestLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
             }
 
             Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
         .padding(16)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
+        .contentShape(Rectangle())
     }
 }
 

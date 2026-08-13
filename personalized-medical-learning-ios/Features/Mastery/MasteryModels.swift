@@ -7,6 +7,7 @@ import Foundation
 
 struct DueReviewItem: Decodable {
     let questionUid: String
+    let topicPath: String
     let streak: Int
     let intervalDays: Int
     let lastReviewedAt: Date
@@ -14,6 +15,7 @@ struct DueReviewItem: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case questionUid = "question_uid"
+        case topicPath = "topic_path"
         case streak
         case intervalDays = "interval_days"
         case lastReviewedAt = "last_reviewed_at"

@@ -39,6 +39,16 @@ struct RootView: View {
                         onPracticeTopic: { topic in
                             preselectedSetupTopicPath = topic.path
                             selection = .quiz
+                        },
+                        onReviewDue: { soonestDue in
+                            switch soonestDue.source {
+                            case .quiz:
+                                activeTopicPath = soonestDue.topicPath
+                                selection = .quiz
+                            case .flashcard:
+                                isFlashcardSessionStarted = true
+                                selection = .flashcards
+                            }
                         }
                     )
                 case .quiz:

@@ -171,6 +171,13 @@ private struct ReviewQuestionCard: View {
                 Text("Not answered")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            } else if let nextReviewAt = question.nextReviewAt {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise").font(.caption2)
+                    Text("Next review: \(nextReviewAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(.orange)
             }
 
             VStack(alignment: .leading, spacing: 6) {

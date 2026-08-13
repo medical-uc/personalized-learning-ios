@@ -119,11 +119,13 @@ enum NudgeSource: String, Decodable {
 struct NudgePreviewItem: Decodable {
     let source: NudgeSource
     let questionUid: String
+    let topicPath: String
     let nextReviewAt: Date
 
     enum CodingKeys: String, CodingKey {
         case source
         case questionUid = "question_uid"
+        case topicPath = "topic_path"
         case nextReviewAt = "next_review_at"
     }
 }
