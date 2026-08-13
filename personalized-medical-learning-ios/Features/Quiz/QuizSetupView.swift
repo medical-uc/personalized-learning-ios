@@ -54,6 +54,11 @@ struct QuizSetupView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .safeAreaInset(edge: .bottom) {
+            if currentStep == .topics, selectedTopicID != nil {
+                FloatingNextButton { currentStep = .start }
+            }
+        }
         .task {
             await viewModel.loadTopics()
         }
@@ -68,8 +73,7 @@ struct QuizSetupView: View {
                 isLoading: viewModel.isLoading,
                 errorMessage: viewModel.errorMessage,
                 selectedTopicID: $selectedTopicID,
-                onRetry: { Task { await viewModel.loadTopics() } },
-                onNext: { currentStep = .start }
+                onRetry: { Task { await viewModel.loadTopics() } }
             )
         case .start:
             if let selectedTopic {
@@ -154,7 +158,6 @@ private struct ChooseTopicsStepView: View {
     let errorMessage: String?
     @Binding var selectedTopicID: String?
     var onRetry: () -> Void
-    var onNext: () -> Void
 
     @State private var searchText = ""
     @State private var expandedSubject: String?
@@ -264,28 +267,34 @@ private struct ChooseTopicsStepView: View {
                     }
                 }
             }
-
-            HStack {
-                Spacer()
-
-                Button(action: onNext) {
-                    HStack(spacing: 6) {
-                        Text("Next")
-                        Image(systemName: "chevron.right")
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(selectedTopicID == nil ? Theme.dark.opacity(0.4) : Theme.dark)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(selectedTopicID == nil)
-            }
         }
         .padding(20)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+private struct FloatingNextButton: View {
+    var onNext: () -> Void
+
+    var body: some View {
+        Button(action: onNext) {
+            HStack(spacing: 6) {
+                Text("Next")
+                Image(systemName: "chevron.right")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Theme.dark)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
     }
 }
 
