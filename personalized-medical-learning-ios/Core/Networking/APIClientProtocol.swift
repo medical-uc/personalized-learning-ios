@@ -47,7 +47,6 @@ protocol APIClientProtocol: AnyObject {
 
     // Mastery
     func getDueForReview() async throws -> [DueReviewItem]
-    func getMastery() async throws -> [MasteryItem]
     @discardableResult
     func putMastery(_ items: [MasteryUpdateItem]) async throws -> UpdateMasteryResponse
 

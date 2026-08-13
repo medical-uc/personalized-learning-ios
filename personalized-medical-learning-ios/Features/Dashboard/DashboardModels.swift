@@ -12,7 +12,6 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     case flashcards = "Flashcards"
     case bookmarks = "Bookmarks"
     case history = "History"
-    case mastery = "Knowledge Level"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -25,7 +24,6 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .flashcards: return "rectangle.stack"
         case .bookmarks: return "bookmark"
         case .history: return "clock"
-        case .mastery: return "chart.bar.fill"
         case .settings: return "gearshape"
         }
     }
@@ -44,7 +42,7 @@ enum Theme {
 
 /// Ordinal read of a 0...1 BKT pKnow value, replacing raw percentages in the UI.
 /// Shared thresholds so a topic reads the same tier everywhere it appears
-/// (Knowledge Level, Dashboard Focus Areas, Subjects, Quiz Setup).
+/// (Dashboard Focus Areas, Subjects, Quiz Setup).
 enum MasteryLevel: String {
     case strong = "Strong"
     case developing = "Developing"

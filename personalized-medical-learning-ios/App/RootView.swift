@@ -39,8 +39,7 @@ struct RootView: View {
                         onPracticeTopic: { topic in
                             preselectedSetupTopicPath = topic.path
                             selection = .quiz
-                        },
-                        onViewAllWeakAreas: { selection = .mastery }
+                        }
                     )
                 case .quiz:
                     if let activeTopicPath {
@@ -86,8 +85,6 @@ struct RootView: View {
                     BookmarkView(onBack: { selection = .dashboard })
                 case .history:
                     HistoryView(onBack: { selection = .dashboard })
-                case .mastery:
-                    MasteryView(onBack: { selection = .dashboard })
                 case .settings:
                     SettingsView(onLogOut: onLogOut)
                 default:

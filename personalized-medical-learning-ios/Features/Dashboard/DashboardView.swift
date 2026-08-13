@@ -7,7 +7,6 @@ import SwiftUI
 
 struct DashboardView: View {
     var onPracticeTopic: (QuizTopic) -> Void = { _ in }
-    var onViewAllWeakAreas: () -> Void = {}
 
     @StateObject private var streakViewModel = StreakViewModel()
     @StateObject private var nudgeViewModel = NudgeViewModel()
@@ -35,7 +34,7 @@ struct DashboardView: View {
                     )
                     .onTapGesture { showStreakCalendar = true }
                 } focusAreas: {
-                    FocusAreasCard(onPracticeTopic: onPracticeTopic, onViewAll: onViewAllWeakAreas)
+                    FocusAreasCard(onPracticeTopic: onPracticeTopic)
                 }
             }
             .padding(.horizontal, 24)
@@ -297,7 +296,6 @@ private struct DayStreakCard: View {
 
 private struct FocusAreasCard: View {
     var onPracticeTopic: (QuizTopic) -> Void
-    var onViewAll: () -> Void
 
     /// Below-mastery topics only (< 70%) — matches the quiz setup recommendation bar,
     /// so this card and "Recommended for You" always agree on what still needs work.
@@ -308,26 +306,11 @@ private struct FocusAreasCard: View {
     var body: some View {
         if !entries.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Areas to Improve").font(.headline)
-                        Text("Topics that need more attention")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Button(action: onViewAll) {
-                        Text("View All")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Theme.dark)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Theme.bg)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Areas to Improve").font(.headline)
+                    Text("Topics that need more attention")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 VStack(spacing: 10) {
