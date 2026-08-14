@@ -50,3 +50,44 @@ struct UpdateMasteryResponse: Decodable {
         case updatedCount = "updated_count"
     }
 }
+
+/// GET /quiz/mastery/params response — the global BKT emission/transition parameters,
+/// EM-fit server-side from every student's pooled QUIZ_ANSWER history (see the backend's
+/// src/quiz/bkt_fit.py). BKTStore fetches and caches this, replacing its own hard-coded
+/// defaults, so the shared "how noisy is a confident vs. guessing answer" model stays
+/// current as real interaction volume grows — p_know itself stays entirely
+/// client-computed, this only affects the emission/transition parameters that computation
+/// uses.
+struct BKTConfidenceParams: Codable {
+    let confident: Double
+    let unsure: Double
+    let guessing: Double
+
+    subscript(_ level: ConfidenceLevel) -> Double {
+        switch level {
+        case .confident: return confident
+        case .unsure: return unsure
+        case .guessing: return guessing
+        }
+    }
+}
+
+struct BKTParamsResponse: Codable {
+    let pInit: Double
+    let pTransit: Double
+    let pSlip: BKTConfidenceParams
+    let pGuess: BKTConfidenceParams
+    let nAttempts: Int
+    let nSequences: Int
+    let fittedFromDefaults: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case pInit = "p_init"
+        case pTransit = "p_transit"
+        case pSlip = "p_slip"
+        case pGuess = "p_guess"
+        case nAttempts = "n_attempts"
+        case nSequences = "n_sequences"
+        case fittedFromDefaults = "fitted_from_defaults"
+    }
+}

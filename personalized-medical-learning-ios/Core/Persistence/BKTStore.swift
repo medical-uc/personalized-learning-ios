@@ -7,8 +7,13 @@ import Foundation
 
 /// On-device Bayesian Knowledge Tracing — mirrors the update rule in the backend's
 /// src/quiz/mastery.py (removed server-side; this is now the only place p_know is
-/// computed). Same 2-state HMM, same fixed global params, ported line-for-line so the
-/// math never drifts from what was validated in notebooks/knowledge_tracing.ipynb.
+/// computed). Same 2-state HMM math, ported line-for-line so it never drifts from what
+/// was validated in notebooks/knowledge_tracing.ipynb. p_know computation itself stays
+/// entirely client-side/personalized — but the emission/transition params it runs on
+/// (pInit/pTransit/pSlip/pGuess below) are EM-fit server-side from pooled real
+/// interaction data and fetched via refreshParamsIfNeeded(), not fixed constants — see
+/// that function's doc for why a population-level fit needs pooling across students to
+/// converge (Slater & Baker 2018), and the backend's src/quiz/bkt_fit.py for the fit.
 ///
 /// p_slip/p_guess are confidence-conditional (see the notebook's "BKT baseline
 /// (confidence-conditional emissions)" section): a confident-wrong answer is trusted as
@@ -40,25 +45,88 @@ enum BKTStore {
     private static let pKnowKey = "bkt.pKnow"
     private static let updatedAtKey = "bkt.updatedAt"
     private static let historyKey = "bkt.history"
+    private static let fetchedParamsKey = "bkt.fetchedParams"
+    private static let fetchedParamsAtKey = "bkt.fetchedParamsAt"
 
     /// Per-topic attempt log is capped so UserDefaults doesn't grow unbounded over a
     /// student's lifetime — only recent attempts are useful for "why this level" anyway,
     /// older evidence is already folded into p_know itself.
     private static let maxHistoryPerTopic = 20
 
-    static let pInit = 0.30
-    static let pTransit = 0.10
-
-    static let pSlip: [ConfidenceLevel: Double] = [
+    /// Bootstrap-only defaults — used until the first successful params fetch, and as
+    /// the permanent fallback if a device never gets one (e.g. always offline). See
+    /// refreshParamsIfNeeded(): the real values live server-side, EM-fit from pooled
+    /// real interaction data (src/quiz/bkt_fit.py in the backend repo), and are fetched
+    /// via GET /quiz/mastery/params. These were the original hand-picked values the
+    /// backend notebook validated a 0.5658 next-step AUC against before EM-fitting
+    /// improved it to 0.6819 — kept here only as a cold-start floor, not as the source
+    /// of truth.
+    private static let defaultPInit = 0.30
+    private static let defaultPTransit = 0.10
+    private static let defaultPSlip: [ConfidenceLevel: Double] = [
         .confident: 0.05,
         .unsure: 0.10,
         .guessing: 0.30,
     ]
-    static let pGuess: [ConfidenceLevel: Double] = [
+    private static let defaultPGuess: [ConfidenceLevel: Double] = [
         .confident: 0.10,
         .unsure: 0.25,
         .guessing: 0.50,
     ]
+
+    /// Refetch at most this often — matches the backend's own EM-refit cache TTL
+    /// (src/quiz/bkt_fit.py's _CACHE_TTL_SECONDS), so a device doesn't poll for a fresh
+    /// fit more often than the server could ever actually produce one.
+    private static let paramsRefreshInterval: TimeInterval = 6 * 60 * 60
+
+    private static var fetchedParams: BKTParamsResponse? {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: fetchedParamsKey) else { return nil }
+            return try? JSONDecoder().decode(BKTParamsResponse.self, from: data)
+        }
+        set {
+            let data = newValue.flatMap { try? JSONEncoder().encode($0) }
+            UserDefaults.standard.set(data, forKey: fetchedParamsKey)
+        }
+    }
+
+    private static var fetchedParamsAt: Date? {
+        get {
+            let ts = UserDefaults.standard.double(forKey: fetchedParamsAtKey)
+            return ts > 0 ? Date(timeIntervalSince1970: ts) : nil
+        }
+        set {
+            UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: fetchedParamsAtKey)
+        }
+    }
+
+    static var pInit: Double { fetchedParams?.pInit ?? defaultPInit }
+    static var pTransit: Double { fetchedParams?.pTransit ?? defaultPTransit }
+
+    static var pSlip: [ConfidenceLevel: Double] {
+        guard let fetched = fetchedParams?.pSlip else { return defaultPSlip }
+        return [.confident: fetched.confident, .unsure: fetched.unsure, .guessing: fetched.guessing]
+    }
+
+    static var pGuess: [ConfidenceLevel: Double] {
+        guard let fetched = fetchedParams?.pGuess else { return defaultPGuess }
+        return [.confident: fetched.confident, .unsure: fetched.unsure, .guessing: fetched.guessing]
+    }
+
+    /// Fetches the latest EM-fitted params from the server if the cached copy is
+    /// missing or older than paramsRefreshInterval; otherwise a no-op. Call from a
+    /// low-frequency sync point (e.g. dashboard load) — safe to call often since it's
+    /// self-throttling, and safe to ignore failures since pInit/pTransit/pSlip/pGuess
+    /// above transparently fall back to the last cached fit (or the bootstrap defaults
+    /// if there's never been one).
+    static func refreshParamsIfNeeded(client: any APIClientProtocol = APIClient.shared) async {
+        if let lastFetch = fetchedParamsAt, Date().timeIntervalSince(lastFetch) < paramsRefreshInterval {
+            return
+        }
+        guard let response = try? await client.getBKTParams() else { return }
+        fetchedParams = response
+        fetchedParamsAt = Date()
+    }
 
     private static var pKnowByTopic: [String: Double] {
         get { UserDefaults.standard.dictionary(forKey: pKnowKey) as? [String: Double] ?? [:] }

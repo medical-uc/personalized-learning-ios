@@ -51,6 +51,7 @@ protocol APIClientProtocol: AnyObject {
     func getDueForReview() async throws -> [DueReviewItem]
     @discardableResult
     func putMastery(_ items: [MasteryUpdateItem]) async throws -> UpdateMasteryResponse
+    func getBKTParams() async throws -> BKTParamsResponse
 
     // History
     func getHistory() async throws -> [HistoryItem]

@@ -30,4 +30,15 @@ extension APIClient {
             token: token
         )
     }
+
+    /// The global BKT emission/transition params, EM-fit server-side from pooled real
+    /// interaction data — see BKTStore.refreshParamsIfNeeded(), the only caller. Unlike
+    /// putMastery, this is a GET with no per-student payload: the fit is pooled across
+    /// every student, not personalized to this one.
+    func getBKTParams() async throws -> BKTParamsResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to fetch mastery params.")
+        }
+        return try await get(path: "quiz/mastery/params", token: token)
+    }
 }

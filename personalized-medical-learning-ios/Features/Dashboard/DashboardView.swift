@@ -51,6 +51,7 @@ struct DashboardView: View {
         .task {
             await streakViewModel.loadStreak()
             await nudgeViewModel.loadNudge()
+            await BKTStore.refreshParamsIfNeeded()
             if streakViewModel.brokenStreakLength != nil {
                 showBrokenStreakSheet = true
             }
