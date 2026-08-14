@@ -28,7 +28,7 @@ final class FlashcardViewModel: ObservableObject {
 
     var totalCards: Int { cards.count }
 
-    func loadCards() async {
+    func loadCards(topicPath: String? = nil) async {
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
@@ -37,7 +37,7 @@ final class FlashcardViewModel: ObservableObject {
         do {
             async let cardsTask = client.getAllCards()
             async let dueTask = client.getDueFlashcards()
-            async let sessionTask = client.startFlashcardSession(topicPath: nil, size: nil)
+            async let sessionTask = client.startFlashcardSession(topicPath: topicPath, size: nil)
             let (out, due, session) = try await (cardsTask, dueTask, sessionTask)
 
             let byUid = Dictionary(uniqueKeysWithValues: out.map { ($0.uid, $0) })

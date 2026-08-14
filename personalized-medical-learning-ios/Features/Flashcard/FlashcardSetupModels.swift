@@ -5,9 +5,27 @@
 
 import Foundation
 
-/// Pre-session snapshot shown on the confirm screen — due count drives the "N cards
-/// due" stat, weakestTopic drives the "Focus: X" stat. Both derived client-side
-/// (getDueFlashcards + BKTStore) so the confirm screen never needs its own endpoint.
+enum FlashcardSetupStep: Int, SetupStep {
+    case topics
+    case start
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .topics: return "Choose Topic"
+        case .start: return "Session Preview"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .topics: return "Select the topic you want to review, or study everything due."
+        case .start: return "Review your session before starting."
+        }
+    }
+}
+
 struct FlashcardSessionPreview {
     let dueCount: Int
     let totalCount: Int

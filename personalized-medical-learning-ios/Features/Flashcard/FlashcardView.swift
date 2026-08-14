@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct FlashcardView: View {
+    var topicPath: String?
     var onBack: () -> Void = {}
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -45,7 +46,7 @@ struct FlashcardView: View {
         }
         .background(Theme.bg)
         .task {
-            await viewModel.loadCards()
+            await viewModel.loadCards(topicPath: topicPath)
         }
         .onChange(of: viewModel.currentIndex) {
             isFlipped = false

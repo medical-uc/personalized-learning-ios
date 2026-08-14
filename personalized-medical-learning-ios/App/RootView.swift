@@ -17,6 +17,8 @@ struct RootView: View {
     @State private var preselectedSetupTopicPath: String?
     @State private var energyToastAmount: Int?
     @State private var isFlashcardSessionStarted = false
+    @State private var activeFlashcardTopicPath: String?
+    @State private var preselectedFlashcardSetupTopicPath: String?
     @State private var isOffline = !Reachability.shared.isOnline
 
     private func requestSelect(_ item: SidebarItem) {
@@ -80,14 +82,27 @@ struct RootView: View {
                     }
                 case .flashcards:
                     if isFlashcardSessionStarted {
-                        FlashcardView(onBack: {
+                        FlashcardView(topicPath: activeFlashcardTopicPath, onBack: {
                             isFlashcardSessionStarted = false
+                            activeFlashcardTopicPath = nil
                         })
-                        .onDisappear { isFlashcardSessionStarted = false }
+                        .onDisappear {
+                            isFlashcardSessionStarted = false
+                            activeFlashcardTopicPath = nil
+                        }
                     } else {
-                        FlashcardSetupView(onBegin: {
-                            isFlashcardSessionStarted = true
-                        })
+                        FlashcardSetupView(
+                            preselectedTopicPath: preselectedFlashcardSetupTopicPath,
+                            onBack: {
+                                preselectedFlashcardSetupTopicPath = nil
+                                selection = .dashboard
+                            },
+                            onBegin: { topicPath in
+                                preselectedFlashcardSetupTopicPath = nil
+                                activeFlashcardTopicPath = topicPath
+                                isFlashcardSessionStarted = true
+                            }
+                        )
                     }
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })

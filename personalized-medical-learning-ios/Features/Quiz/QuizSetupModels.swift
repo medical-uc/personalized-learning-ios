@@ -35,7 +35,7 @@ struct QuizSubjectGroup: Identifiable {
     let topics: [QuizTopic]
 }
 
-enum QuizSetupStep: Int, CaseIterable, Identifiable {
+enum QuizSetupStep: Int, SetupStep {
     case topics
     case start
 
