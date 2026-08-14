@@ -6,7 +6,9 @@
 import SwiftUI
 
 struct QuizView: View {
-    var topicPath: String
+    /// nil starts a cross-topic due-review batch instead of one topic's questions —
+    /// see QuizViewModel.topicPath.
+    var topicPath: String?
     var questionCount: Int?
     var isReviewModeEnabled: Bool = true
     var onBack: () -> Void = {}
@@ -18,7 +20,7 @@ struct QuizView: View {
     @State private var resultSummary: QuizResultSummary?
     @State private var showExitConfirm = false
 
-    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
+    init(topicPath: String? = nil, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
         self.topicPath = topicPath
         self.questionCount = questionCount
         self.isReviewModeEnabled = isReviewModeEnabled

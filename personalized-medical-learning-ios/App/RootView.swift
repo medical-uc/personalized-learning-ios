@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var activeTopicPath: String?
     @State private var activeQuestionCount: Int = 10
     @State private var activeReviewModeEnabled: Bool = true
+    @State private var isBatchQuizStarted = false
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
     @State private var preselectedSetupTopicPath: String?
@@ -45,16 +46,28 @@ struct RootView: View {
                         onReviewDue: { soonestDue in
                             switch soonestDue.source {
                             case .quiz:
-                                activeTopicPath = soonestDue.topicPath
+                                activeTopicPath = nil
+                                isBatchQuizStarted = true
                                 selection = .quiz
                             case .flashcard:
+                                activeFlashcardTopicPath = nil
                                 isFlashcardSessionStarted = true
                                 selection = .flashcards
                             }
                         }
                     )
                 case .quiz:
-                    if let activeTopicPath {
+                    if isBatchQuizStarted {
+                        QuizView(
+                            questionCount: activeQuestionCount,
+                            isReviewModeEnabled: activeReviewModeEnabled,
+                            onBack: {
+                                isBatchQuizStarted = false
+                                selection = .dashboard
+                            },
+                            onProgressChange: { isQuizInProgress = $0 }
+                        )
+                    } else if let activeTopicPath {
                         QuizView(
                             topicPath: activeTopicPath,
                             questionCount: activeQuestionCount,
@@ -129,6 +142,7 @@ struct RootView: View {
             Button("Leave Quiz", role: .destructive) {
                 isQuizInProgress = false
                 activeTopicPath = nil
+                isBatchQuizStarted = false
                 if let pendingSelection {
                     selection = pendingSelection
                 }

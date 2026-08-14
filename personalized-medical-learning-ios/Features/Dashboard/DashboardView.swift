@@ -205,9 +205,12 @@ private struct DueForReviewCard: View {
 
     private var soonestLabel: String? {
         guard let soonestDue else { return nil }
-        let topic = soonestDue.topicPath.components(separatedBy: " > ").last ?? soonestDue.topicPath
-        let kind = soonestDue.source == .quiz ? "Quiz" : "Flashcard"
-        return "Next: \(kind) — \(topic)"
+        switch soonestDue.source {
+        case .quiz:
+            return "Next: Quiz — review all due"
+        case .flashcard:
+            return "Next: Flashcards — review all due"
+        }
     }
 
     var body: some View {

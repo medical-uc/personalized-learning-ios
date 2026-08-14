@@ -207,6 +207,24 @@ struct StartSessionResponse: Decodable {
     }
 }
 
+/// Response for the cross-topic batch session (POST /quiz/sessions): unlike a
+/// topic-scoped session, question_uids is the fixed due-first batch pinned server-side
+/// at start time — pair with getAllQuestions() to resolve uids to content, same as
+/// FlashcardViewModel does with card_uids.
+struct StartBatchSessionResponse: Decodable {
+    let sessionId: String
+    let questionUids: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case questionUids = "question_uids"
+    }
+}
+
+struct StartBatchSessionRequest: Encodable {
+    let size: Int?
+}
+
 struct EndSessionResponse: Decodable {
     let sessionId: String
     let questionCount: Int

@@ -10,6 +10,10 @@ extension APIClient {
         try await get(path: "quiz/topics/\(topicPath)/questions")
     }
 
+    func getAllQuestions() async throws -> [QuestionOut] {
+        try await get(path: "quiz/questions")
+    }
+
     func checkAnswer(uid: String, selectedIndex: Int) async throws -> CheckAnswerResponse {
         try await send(
             path: "quiz/questions/\(uid)/check",
@@ -35,6 +39,18 @@ extension APIClient {
             throw APIError.server("You must be signed in to start a quiz.")
         }
         return try await post(path: "quiz/topics/\(topicPath)/sessions", expectedStatus: 200, token: token)
+    }
+
+    func startBatchSession(size: Int? = nil) async throws -> StartBatchSessionResponse {
+        guard let token = SessionManager.token else {
+            throw APIError.server("You must be signed in to start a quiz.")
+        }
+        return try await send(
+            path: "quiz/sessions",
+            body: StartBatchSessionRequest(size: size),
+            expectedStatus: 200,
+            token: token
+        )
     }
 
     func endSession(sessionId: String) async throws -> EndSessionResponse {

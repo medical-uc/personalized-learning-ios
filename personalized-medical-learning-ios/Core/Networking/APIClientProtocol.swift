@@ -28,9 +28,11 @@ protocol APIClientProtocol: AnyObject {
 
     // Quiz
     func getQuestions(topicPath: String) async throws -> [QuestionOut]
+    func getAllQuestions() async throws -> [QuestionOut]
     func checkAnswer(uid: String, selectedIndex: Int) async throws -> CheckAnswerResponse
     func logAttempt(uid: String, sessionId: String, selectedIndex: Int, confidence: String, timeTakenSeconds: Double, nextReviewDays: Int?) async throws -> LogAttemptResponse
     func startSession(topicPath: String) async throws -> StartSessionResponse
+    func startBatchSession(size: Int?) async throws -> StartBatchSessionResponse
     func endSession(sessionId: String) async throws -> EndSessionResponse
     func cancelSession(sessionId: String) async throws -> CancelSessionResponse
 

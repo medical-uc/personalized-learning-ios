@@ -15,7 +15,9 @@ final class QuizViewModel: ObservableObject {
     @Published private(set) var elapsedSeconds = 0
     @Published var errorMessage: String?
 
-    let topicPath: String
+    /// nil means a cross-topic due-review batch (POST /quiz/sessions) rather than one
+    /// topic's questions — see loadQuestions().
+    let topicPath: String?
     let isReviewModeEnabled: Bool
     private let questionCount: Int?
     private let client: any APIClientProtocol
@@ -24,7 +26,13 @@ final class QuizViewModel: ObservableObject {
     private var answerTimeTaken: [String: Double] = [:]
     private var sessionId: String?
 
-    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
+    /// Display label for the header/result screen when there's no single topic to name
+    /// (batch mode) — topic mode always has a concrete topicPath to show instead.
+    var displayTopicPath: String {
+        topicPath ?? "Due for Review"
+    }
+
+    init(topicPath: String? = nil, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
         self.topicPath = topicPath
         self.questionCount = questionCount
         self.isReviewModeEnabled = isReviewModeEnabled
@@ -94,14 +102,29 @@ final class QuizViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            async let questionsTask = client.getQuestions(topicPath: topicPath)
-            async let sessionTask = client.startSession(topicPath: topicPath)
-            let (out, session) = try await (questionsTask, sessionTask)
-            let limited = questionCount.map { Array(out.prefix($0)) } ?? out
+            let out: [QuestionOut]
+            let newSessionId: String
+
+            if let topicPath {
+                async let questionsTask = client.getQuestions(topicPath: topicPath)
+                async let sessionTask = client.startSession(topicPath: topicPath)
+                let (questionsOut, session) = try await (questionsTask, sessionTask)
+                out = questionsOut
+                newSessionId = session.sessionId
+            } else {
+                async let allQuestionsTask = client.getAllQuestions()
+                async let sessionTask = client.startBatchSession(size: questionCount)
+                let (allQuestions, session) = try await (allQuestionsTask, sessionTask)
+                let byUid = Dictionary(uniqueKeysWithValues: allQuestions.map { ($0.uid, $0) })
+                out = session.questionUids.compactMap { byUid[$0] }
+                newSessionId = session.sessionId
+            }
+
+            let limited = topicPath != nil ? (questionCount.map { Array(out.prefix($0)) } ?? out) : out
             questions = limited.enumerated().map { index, question in
                 QuizQuestion(index: index + 1, questionOut: question)
             }
-            sessionId = session.sessionId
+            sessionId = newSessionId
             currentIndex = 0
             startTimer()
         } catch {
@@ -240,7 +263,7 @@ final class QuizViewModel: ObservableObject {
 
     var resultSummary: QuizResultSummary {
         QuizResultSummary(
-            topicPath: topicPath,
+            topicPath: displayTopicPath,
             totalQuestions: totalQuestions,
             correctCount: correctCount,
             incorrectCount: incorrectCount,
