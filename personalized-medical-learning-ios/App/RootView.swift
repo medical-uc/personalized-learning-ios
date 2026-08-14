@@ -20,6 +20,7 @@ struct RootView: View {
     @State private var isFlashcardSessionStarted = false
     @State private var activeFlashcardTopicPath: String?
     @State private var preselectedFlashcardSetupTopicPath: String?
+    @State private var flashcardSetupStartsWithAllDue = false
     @State private var isOffline = !Reachability.shared.isOnline
 
     private func requestSelect(_ item: SidebarItem) {
@@ -50,8 +51,8 @@ struct RootView: View {
                                 isBatchQuizStarted = true
                                 selection = .quiz
                             case .flashcard:
-                                activeFlashcardTopicPath = nil
-                                isFlashcardSessionStarted = true
+                                preselectedFlashcardSetupTopicPath = nil
+                                flashcardSetupStartsWithAllDue = true
                                 selection = .flashcards
                             }
                         }
@@ -106,12 +107,15 @@ struct RootView: View {
                     } else {
                         FlashcardSetupView(
                             preselectedTopicPath: preselectedFlashcardSetupTopicPath,
+                            startWithAllDue: flashcardSetupStartsWithAllDue,
                             onBack: {
                                 preselectedFlashcardSetupTopicPath = nil
+                                flashcardSetupStartsWithAllDue = false
                                 selection = .dashboard
                             },
                             onBegin: { topicPath in
                                 preselectedFlashcardSetupTopicPath = nil
+                                flashcardSetupStartsWithAllDue = false
                                 activeFlashcardTopicPath = topicPath
                                 isFlashcardSessionStarted = true
                             }

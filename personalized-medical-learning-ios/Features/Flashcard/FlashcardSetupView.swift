@@ -10,6 +10,11 @@ import SwiftUI
 /// FlashcardViewModel keeps the existing all-cards, due-first session behavior.
 struct FlashcardSetupView: View {
     var preselectedTopicPath: String?
+    /// Skips the topic-picker step and lands straight on the preview with "Study
+    /// Everything Due" already selected — for entry points (e.g. the dashboard's Due
+    /// for Review card) that already know the student wants the all-due batch, not a
+    /// specific topic.
+    var startWithAllDue: Bool = false
     var onBack: () -> Void = {}
     var onBegin: (String?) -> Void = { _ in }
 
@@ -17,11 +22,12 @@ struct FlashcardSetupView: View {
     @State private var currentStep: FlashcardSetupStep
     @State private var selectedTopicID: String?
 
-    init(preselectedTopicPath: String? = nil, onBack: @escaping () -> Void = {}, onBegin: @escaping (String?) -> Void = { _ in }) {
+    init(preselectedTopicPath: String? = nil, startWithAllDue: Bool = false, onBack: @escaping () -> Void = {}, onBegin: @escaping (String?) -> Void = { _ in }) {
         self.preselectedTopicPath = preselectedTopicPath
+        self.startWithAllDue = startWithAllDue
         self.onBack = onBack
         self.onBegin = onBegin
-        _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .start)
+        _currentStep = State(initialValue: (preselectedTopicPath == nil && !startWithAllDue) ? .topics : .start)
         _selectedTopicID = State(initialValue: preselectedTopicPath)
     }
 
