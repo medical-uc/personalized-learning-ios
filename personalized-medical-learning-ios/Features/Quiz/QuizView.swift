@@ -6,9 +6,6 @@
 import SwiftUI
 
 struct QuizView: View {
-    /// nil starts a cross-topic due-review batch instead of one topic's questions —
-    /// see QuizViewModel.topicPath.
-    var topicPath: String?
     var questionCount: Int?
     var isReviewModeEnabled: Bool = true
     var onBack: () -> Void = {}
@@ -20,13 +17,32 @@ struct QuizView: View {
     @State private var resultSummary: QuizResultSummary?
     @State private var showExitConfirm = false
 
-    init(topicPath: String? = nil, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
-        self.topicPath = topicPath
+    /// Single-topic run — the original flow (Practice Now on a specific topic).
+    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
         self.questionCount = questionCount
         self.isReviewModeEnabled = isReviewModeEnabled
         self.onBack = onBack
         self.onProgressChange = onProgressChange
         _viewModel = StateObject(wrappedValue: QuizViewModel(topicPath: topicPath, questionCount: questionCount, isReviewModeEnabled: isReviewModeEnabled))
+    }
+
+    /// Multi-topic run (up to QuizSetupView.maxTopics) — questions are drawn from all
+    /// given topics, weighted toward the student's weakest one.
+    init(topicPaths: [String], questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
+        self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
+        self.onBack = onBack
+        self.onProgressChange = onProgressChange
+        _viewModel = StateObject(wrappedValue: QuizViewModel(topicPaths: topicPaths, questionCount: questionCount, isReviewModeEnabled: isReviewModeEnabled))
+    }
+
+    /// Cross-topic due-review batch (no topic given) — the dashboard's Due for Review tap.
+    init(questionCount: Int? = nil, isReviewModeEnabled: Bool = true, onBack: @escaping () -> Void = {}, onProgressChange: @escaping (Bool) -> Void = { _ in }) {
+        self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
+        self.onBack = onBack
+        self.onProgressChange = onProgressChange
+        _viewModel = StateObject(wrappedValue: QuizViewModel(questionCount: questionCount, isReviewModeEnabled: isReviewModeEnabled))
     }
 
     var body: some View {

@@ -10,6 +10,7 @@ struct RootView: View {
 
     @State private var selection: SidebarItem = .dashboard
     @State private var activeTopicPath: String?
+    @State private var activeTopicPaths: [String]?
     @State private var activeQuestionCount: Int = 10
     @State private var activeReviewModeEnabled: Bool = true
     @State private var isBatchQuizStarted = false
@@ -48,6 +49,7 @@ struct RootView: View {
                             switch soonestDue.source {
                             case .quiz:
                                 activeTopicPath = nil
+                                activeTopicPaths = nil
                                 isBatchQuizStarted = true
                                 selection = .quiz
                             case .flashcard:
@@ -79,6 +81,17 @@ struct RootView: View {
                             },
                             onProgressChange: { isQuizInProgress = $0 }
                         )
+                    } else if let activeTopicPaths {
+                        QuizView(
+                            topicPaths: activeTopicPaths,
+                            questionCount: activeQuestionCount,
+                            isReviewModeEnabled: activeReviewModeEnabled,
+                            onBack: {
+                                self.activeTopicPaths = nil
+                                selection = .dashboard
+                            },
+                            onProgressChange: { isQuizInProgress = $0 }
+                        )
                     } else {
                         QuizSetupView(
                             preselectedTopicPath: preselectedSetupTopicPath,
@@ -86,9 +99,13 @@ struct RootView: View {
                                 preselectedSetupTopicPath = nil
                                 selection = .dashboard
                             },
-                            onStart: { topic, settings in
+                            onStart: { topics, settings in
                                 preselectedSetupTopicPath = nil
-                                activeTopicPath = topic.path
+                                if topics.count == 1 {
+                                    activeTopicPath = topics[0].path
+                                } else {
+                                    activeTopicPaths = topics.map(\.path)
+                                }
                                 activeQuestionCount = settings.questionCount
                                 activeReviewModeEnabled = settings.isReviewModeEnabled
                             }
@@ -146,6 +163,7 @@ struct RootView: View {
             Button("Leave Quiz", role: .destructive) {
                 isQuizInProgress = false
                 activeTopicPath = nil
+                activeTopicPaths = nil
                 isBatchQuizStarted = false
                 if let pendingSelection {
                     selection = pendingSelection

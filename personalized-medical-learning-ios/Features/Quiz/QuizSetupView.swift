@@ -11,23 +11,28 @@ struct QuizSetupView: View {
     /// topic and just needs the learner to confirm before starting.
     var preselectedTopicPath: String?
     var onBack: () -> Void = {}
-    var onStart: (QuizTopic, QuizSettings) -> Void = { _, _ in }
+    /// Up to 3 topics — the question-selection algorithm (QuizViewModel) draws from all
+    /// of them and weights toward whichever the student is weakest in, rather than a
+    /// single fixed topic.
+    var onStart: ([QuizTopic], QuizSettings) -> Void = { _, _ in }
+
+    static let maxTopics = 3
 
     @StateObject private var viewModel = QuizSetupViewModel()
     @State private var currentStep: QuizSetupStep
-    @State private var selectedTopicID: String?
+    @State private var selectedTopicIDs: Set<String>
     @State private var settings = QuizSettings()
 
-    init(preselectedTopicPath: String? = nil, onBack: @escaping () -> Void = {}, onStart: @escaping (QuizTopic, QuizSettings) -> Void = { _, _ in }) {
+    init(preselectedTopicPath: String? = nil, onBack: @escaping () -> Void = {}, onStart: @escaping ([QuizTopic], QuizSettings) -> Void = { _, _ in }) {
         self.preselectedTopicPath = preselectedTopicPath
         self.onBack = onBack
         self.onStart = onStart
         _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .start)
-        _selectedTopicID = State(initialValue: preselectedTopicPath)
+        _selectedTopicIDs = State(initialValue: preselectedTopicPath.map { Set([$0]) } ?? [])
     }
 
-    private var selectedTopic: QuizTopic? {
-        viewModel.topics.first { $0.id == selectedTopicID }
+    private var selectedTopics: [QuizTopic] {
+        viewModel.topics.filter { selectedTopicIDs.contains($0.id) }
     }
 
     var body: some View {
@@ -55,7 +60,7 @@ struct QuizSetupView: View {
         }
         .background(Theme.bg)
         .safeAreaInset(edge: .bottom) {
-            if currentStep == .topics, selectedTopicID != nil {
+            if currentStep == .topics, !selectedTopicIDs.isEmpty {
                 FloatingNextButton { currentStep = .start }
             }
         }
@@ -68,20 +73,21 @@ struct QuizSetupView: View {
     private func stepContent(for step: QuizSetupStep) -> some View {
         switch step {
         case .topics:
-            ChooseTopicsStepView(
+            MultiChooseTopicsStepView(
                 topics: viewModel.topics,
                 isLoading: viewModel.isLoading,
                 errorMessage: viewModel.errorMessage,
-                selectedTopicID: $selectedTopicID,
+                selectedTopicIDs: $selectedTopicIDs,
+                maxSelection: Self.maxTopics,
                 onRetry: { Task { await viewModel.loadTopics() } }
             )
         case .start:
-            if let selectedTopic {
+            if !selectedTopics.isEmpty {
                 QuizPreviewStepView(
-                    topic: selectedTopic,
+                    topics: selectedTopics,
                     settings: $settings,
                     onEditTopics: { currentStep = .topics },
-                    onBegin: { onStart(selectedTopic, settings) }
+                    onBegin: { onStart(selectedTopics, settings) }
                 )
             }
         }
@@ -89,7 +95,7 @@ struct QuizSetupView: View {
 }
 
 private struct QuizPreviewStepView: View {
-    let topic: QuizTopic
+    let topics: [QuizTopic]
     @Binding var settings: QuizSettings
     var onEditTopics: () -> Void
     var onBegin: () -> Void
@@ -104,10 +110,14 @@ private struct QuizPreviewStepView: View {
         return seconds == 0 ? "\(minutes) min" : "\(minutes)m \(seconds)s"
     }
 
+    private var topicsLabel: String {
+        topics.count == 1 ? topics[0].name : "\(topics.count) topics"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 0) {
-                PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: topic.name, label: "Topic")
+                PreviewStatTile(icon: "book.closed.fill", tint: Theme.dark, value: topicsLabel, label: "Topics")
                 PreviewStatTile(icon: "list.number", tint: .purple, value: "\(settings.questionCount)", label: "Questions")
                 PreviewStatTile(icon: "clock.fill", tint: .blue, value: totalTimeText, label: "Total Time")
             }
@@ -115,7 +125,9 @@ private struct QuizPreviewStepView: View {
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
 
             HStack {
-                Text("Topic").font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                Text(topics.count == 1 ? "Topic" : "Topics (\(topics.count)/\(QuizSetupView.maxTopics))")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.dark)
                 Spacer()
                 Button(action: onEditTopics) {
                     HStack(spacing: 4) {
@@ -128,18 +140,26 @@ private struct QuizPreviewStepView: View {
                 .buttonStyle(.plain)
             }
 
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(topic.tint.opacity(0.15)).frame(width: 36, height: 36)
-                    Image(systemName: topic.icon).font(.subheadline).foregroundStyle(topic.tint)
+            VStack(spacing: 8) {
+                ForEach(topics) { topic in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(topic.tint.opacity(0.15)).frame(width: 36, height: 36)
+                            Image(systemName: topic.icon).font(.subheadline).foregroundStyle(topic.tint)
+                        }
+                        Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Theme.bg)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                Text(topic.name).font(.subheadline.bold()).foregroundStyle(Theme.dark)
-                Spacer()
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Theme.bg)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Text("Questions are drawn from all selected topics, weighted toward whichever you're weakest in.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Divider()
 

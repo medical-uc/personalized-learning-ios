@@ -15,9 +15,22 @@ final class QuizViewModel: ObservableObject {
     @Published private(set) var elapsedSeconds = 0
     @Published var errorMessage: String?
 
-    /// nil means a cross-topic due-review batch (POST /quiz/sessions) rather than one
-    /// topic's questions — see loadQuestions().
-    let topicPath: String?
+    /// .dueBatch pulls a cross-topic due-review batch (POST /quiz/sessions); .singleTopic
+    /// is the original one-topic run; .multiTopic draws from up to 3 topics at once,
+    /// weighted toward the student's weakest one — see loadQuestions().
+    enum Mode {
+        case dueBatch
+        case singleTopic(String)
+        case multiTopic([String])
+    }
+
+    let mode: Mode
+    /// Single-topic display path, kept for existing call sites (QuizSetupView's
+    /// "Practice Now" preselect, previews) — nil in dueBatch/multiTopic modes.
+    var topicPath: String? {
+        if case .singleTopic(let path) = mode { return path }
+        return nil
+    }
     let isReviewModeEnabled: Bool
     private let questionCount: Int?
     private let client: any APIClientProtocol
@@ -26,14 +39,31 @@ final class QuizViewModel: ObservableObject {
     private var answerTimeTaken: [String: Double] = [:]
     private var sessionId: String?
 
-    /// Display label for the header/result screen when there's no single topic to name
-    /// (batch mode) — topic mode always has a concrete topicPath to show instead.
+    /// Display label for the header/result screen when there's no single topic to name.
     var displayTopicPath: String {
-        topicPath ?? "Due for Review"
+        switch mode {
+        case .dueBatch: return "Due for Review"
+        case .singleTopic(let path): return path
+        case .multiTopic(let paths): return paths.count == 1 ? paths[0] : "\(paths.count) Topics"
+        }
     }
 
-    init(topicPath: String? = nil, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
-        self.topicPath = topicPath
+    init(topicPath: String, questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
+        self.mode = .singleTopic(topicPath)
+        self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
+        self.client = client
+    }
+
+    init(topicPaths: [String], questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
+        self.mode = .multiTopic(topicPaths)
+        self.questionCount = questionCount
+        self.isReviewModeEnabled = isReviewModeEnabled
+        self.client = client
+    }
+
+    init(questionCount: Int? = nil, isReviewModeEnabled: Bool = true, client: any APIClientProtocol = APIClient.shared) {
+        self.mode = .dueBatch
         self.questionCount = questionCount
         self.isReviewModeEnabled = isReviewModeEnabled
         self.client = client
@@ -105,23 +135,34 @@ final class QuizViewModel: ObservableObject {
             let out: [QuestionOut]
             let newSessionId: String
 
-            if let topicPath {
+            switch mode {
+            case .singleTopic(let topicPath):
                 async let questionsTask = client.getQuestions(topicPath: topicPath)
                 async let sessionTask = client.startSession(topicPath: topicPath)
                 let (questionsOut, session) = try await (questionsTask, sessionTask)
-                out = questionsOut
+                let limit = questionCount ?? questionsOut.count
+                out = Array(questionsOut.prefix(limit))
                 newSessionId = session.sessionId
-            } else {
+
+            case .dueBatch:
                 async let allQuestionsTask = client.getAllQuestions()
                 async let sessionTask = client.startBatchSession(size: questionCount)
                 let (allQuestions, session) = try await (allQuestionsTask, sessionTask)
                 let byUid = Dictionary(uniqueKeysWithValues: allQuestions.map { ($0.uid, $0) })
                 out = session.questionUids.compactMap { byUid[$0] }
                 newSessionId = session.sessionId
+
+            case .multiTopic(let topicPaths):
+                var allTopicQuestions: [QuestionOut] = []
+                for path in topicPaths {
+                    allTopicQuestions.append(contentsOf: try await client.getQuestions(topicPath: path))
+                }
+                let session = try await client.startBatchSession(size: questionCount)
+                out = Self.selectWeightedByWeakness(from: allTopicQuestions, count: questionCount ?? 10)
+                newSessionId = session.sessionId
             }
 
-            let limited = topicPath != nil ? (questionCount.map { Array(out.prefix($0)) } ?? out) : out
-            questions = limited.enumerated().map { index, question in
+            questions = out.enumerated().map { index, question in
                 QuizQuestion(index: index + 1, questionOut: question)
             }
             sessionId = newSessionId
@@ -130,6 +171,53 @@ final class QuizViewModel: ObservableObject {
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
+    }
+
+    /// Picks `count` questions across the pooled multi-topic candidates, weighted toward
+    /// whichever topic the student is weakest in (lowest BKTStore.pKnow) — same weakest-
+    /// first idea FlashcardViewModel already uses for its non-due fill order, adapted
+    /// here to also cap how many questions any single topic can dominate with.
+    ///
+    /// Per-topic quota is inversely proportional to pKnow: a topic at 20% mastery gets
+    /// roughly 4x the slots of one at 80%, so the weakest topic is favored without fully
+    /// excluding the others. Remainder slots (from rounding, or a topic running out of
+    /// questions) are backfilled from whatever's left, weakest-topic-first.
+    static func selectWeightedByWeakness(from questions: [QuestionOut], count: Int) -> [QuestionOut] {
+        guard !questions.isEmpty else { return [] }
+
+        let byTopic = Dictionary(grouping: questions) { $0.topicTag.joined(separator: " > ") }
+        let topics = byTopic.keys.sorted()
+        guard topics.count > 1 else {
+            return Array(questions.shuffled().prefix(count))
+        }
+
+        // Weakness weight: inverse of pKnow, floored so a "mastered" topic still gets a
+        // fair shot at appearing rather than being excluded outright.
+        let weights = topics.map { topic in max(0.15, 1 - BKTStore.pKnow(for: topic)) }
+        let totalWeight = weights.reduce(0, +)
+
+        let quotas = Dictionary(uniqueKeysWithValues: zip(topics, weights).map { topic, weight in
+            (topic, Int((weight / totalWeight * Double(count)).rounded()))
+        })
+
+        var selected: [QuestionOut] = []
+        var remainingByTopic = byTopic.mapValues { $0.shuffled() }
+
+        for topic in topics {
+            let quota = quotas[topic] ?? 0
+            let take = min(quota, remainingByTopic[topic]?.count ?? 0)
+            selected.append(contentsOf: remainingByTopic[topic]?.prefix(take) ?? [])
+            remainingByTopic[topic]?.removeFirst(take)
+        }
+
+        if selected.count < count {
+            let leftover = topics
+                .sorted { BKTStore.pKnow(for: $0) < BKTStore.pKnow(for: $1) }
+                .flatMap { remainingByTopic[$0] ?? [] }
+            selected.append(contentsOf: leftover.prefix(count - selected.count))
+        }
+
+        return Array(selected.shuffled().prefix(count))
     }
 
     /// Freely re-selectable until checkCurrentAnswer() locks the question — a student

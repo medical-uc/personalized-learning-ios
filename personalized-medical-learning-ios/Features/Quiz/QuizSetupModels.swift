@@ -43,14 +43,14 @@ enum QuizSetupStep: Int, SetupStep {
 
     var title: String {
         switch self {
-        case .topics: return "Choose Topic"
+        case .topics: return "Choose Topics"
         case .start: return "Quiz Preview"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .topics: return "Select the topic you want to be tested on."
+        case .topics: return "Select up to \(QuizSetupView.maxTopics) topics you want to be tested on."
         case .start: return "Review your quiz before starting."
         }
     }
