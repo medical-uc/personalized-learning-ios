@@ -32,17 +32,35 @@ struct MasteryEntry: Identifiable {
 
     /// Best-effort subject → icon/tint so Focus Areas doesn't show the same glyph for
     /// every row; falls back to a generic book for subjects outside the curated list.
+    /// Keyed to the live biochem question bank's subject names (see
+    /// src/domain_kg/data/docs/*/questions.json chapters) — not the old
+    /// anatomy/endocrine/physio subject set this repo shipped before that swap.
     private static let subjectStyles: [(keyword: String, icon: String, tint: Color)] = [
-        ("cardio", "heart.text.square.fill", .red),
-        ("pharma", "pills.fill", .purple),
-        ("physio", "brain.head.profile", .orange),
-        ("anatom", "figure.stand", .blue),
-        ("patho", "cross.case.fill", .pink),
-        ("micro", "ant.fill", .teal),
-        ("neuro", "brain", .indigo),
-        ("endocrin", "drop.fill", .mint),
-        ("respirat", "lungs.fill", .cyan),
-        ("renal", "drop.triangle.fill", .brown)
+        ("amino acid", "link", .red),
+        ("protein", "puzzlepiece.fill", .red),
+        ("metabolism", "bolt.fill", .orange),
+        ("gluconeogenesis", "bolt.fill", .orange),
+        ("glycogen", "bolt.fill", .orange),
+        ("lipid", "drop.fill", .yellow),
+        ("fatty acid", "drop.fill", .yellow),
+        ("acylglycerol", "drop.fill", .yellow),
+        ("enzyme", "arrow.triangle.branch", .blue),
+        ("signal transduction", "arrow.triangle.branch", .blue),
+        ("hormone", "waveform.path.ecg", .pink),
+        ("endocrine", "waveform.path.ecg", .pink),
+        ("nucleotide", "atom", .purple),
+        ("gene expression", "atom", .purple),
+        ("genetic code", "atom", .purple),
+        ("porphyrin", "circle.hexagongrid.fill", .indigo),
+        ("transition metal", "circle.hexagongrid.fill", .indigo),
+        ("vitamin", "leaf.fill", .green),
+        ("micronutrient", "leaf.fill", .green),
+        ("antioxidant", "leaf.fill", .green),
+        ("respiratory chain", "lungs.fill", .cyan),
+        ("oxidative phosphorylation", "lungs.fill", .cyan),
+        ("glycoprotein", "hexagon.fill", .teal),
+        ("pentose phosphate", "hexagon.fill", .teal),
+        ("water", "drop.triangle.fill", .brown)
     ]
 
     var subjectIcon: String {

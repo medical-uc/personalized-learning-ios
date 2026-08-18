@@ -119,13 +119,13 @@ private struct SubjectPicker: View {
     /// the backend anywhere today, so accuracy here doesn't matter yet; SubjectsView is
     /// the one place that reflects the real backend catalog.
     private static let options: [(name: String, icon: String, tint: Color)] = [
-        ("Cardiology", "heart.fill", .red),
-        ("Anatomy", "figure.stand", .teal),
-        ("Pharmacology", "pills.fill", .orange),
-        ("Pathology", "microscope", .blue),
-        ("Microbiology", "circle.grid.3x3.fill", .purple),
-        ("Neurology", "brain.head.profile", .pink),
-        ("Pulmonology", "lungs.fill", .cyan)
+        ("Amino Acids & Proteins", "link", .red),
+        ("Metabolism & Bioenergetics", "bolt.fill", .orange),
+        ("Lipids & Fatty Acids", "drop.fill", .yellow),
+        ("Enzymes & Signal Transduction", "arrow.triangle.branch", .blue),
+        ("Nucleotides & Gene Expression", "atom", .purple),
+        ("Endocrine Biochemistry", "waveform.path.ecg", .pink),
+        ("Vitamins & Micronutrients", "leaf.fill", .green)
     ]
 
     var body: some View {

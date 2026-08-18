@@ -114,7 +114,7 @@ private struct DeckCard: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Theme.mint)
                     .frame(width: 56, height: 56)
-                    .overlay(Image(systemName: "heart.fill").foregroundStyle(.red))
+                    .overlay(Image(systemName: "atom").foregroundStyle(.purple))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(FlashcardData.deckName).font(.subheadline.weight(.semibold))

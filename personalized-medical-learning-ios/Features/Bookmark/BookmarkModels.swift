@@ -26,11 +26,11 @@ struct BookmarkItem: Identifiable {
 
 enum BookmarkData {
     static let items: [BookmarkItem] = [
-        .init(kind: .question, title: "What is the most common cause of acute myocardial infarction?", subtitle: "Cardiology · Quiz Question", icon: "questionmark.circle", tint: .red, savedAgo: "2d ago"),
-        .init(kind: .flashcard, title: "SA Node", subtitle: "Cardiology · Flashcard", icon: "rectangle.stack", tint: .teal, savedAgo: "3d ago"),
-        .init(kind: .subject, title: "Cardiology", subtitle: "Subject · 142 concepts", icon: "heart.fill", tint: .red, savedAgo: "5d ago"),
-        .init(kind: .question, title: "Which cranial nerve controls the muscles of facial expression?", subtitle: "Neurology · Quiz Question", icon: "questionmark.circle", tint: .pink, savedAgo: "1w ago"),
-        .init(kind: .flashcard, title: "Bundle of His", subtitle: "Cardiology · Flashcard", icon: "rectangle.stack", tint: .teal, savedAgo: "1w ago"),
-        .init(kind: .subject, title: "Pharmacology", subtitle: "Subject · 310 concepts", icon: "pills.fill", tint: .orange, savedAgo: "2w ago")
+        .init(kind: .question, title: "Which enzyme catalyzes the committed step of glycolysis?", subtitle: "Metabolism & Bioenergetics · Quiz Question", icon: "questionmark.circle", tint: .orange, savedAgo: "2d ago"),
+        .init(kind: .flashcard, title: "Urea Cycle", subtitle: "Amino Acids & Peptides · Flashcard", icon: "rectangle.stack", tint: .red, savedAgo: "3d ago"),
+        .init(kind: .subject, title: "Amino Acids & Peptides", subtitle: "Subject · 142 concepts", icon: "link", tint: .red, savedAgo: "5d ago"),
+        .init(kind: .question, title: "Which lipoprotein is responsible for reverse cholesterol transport?", subtitle: "Lipids & Fatty Acids · Quiz Question", icon: "questionmark.circle", tint: .yellow, savedAgo: "1w ago"),
+        .init(kind: .flashcard, title: "Electron Transport Chain", subtitle: "Metabolism & Bioenergetics · Flashcard", icon: "rectangle.stack", tint: .cyan, savedAgo: "1w ago"),
+        .init(kind: .subject, title: "Endocrine Biochemistry", subtitle: "Subject · 310 concepts", icon: "waveform.path.ecg", tint: .pink, savedAgo: "2w ago")
     ]
 }

@@ -13,7 +13,7 @@ struct QuizTopic: Identifiable, Equatable {
     let icon: String
     let tint: Color
 
-    /// Server paths look like "Anatomy of Endocrine Glands > Thyroid gland anatomy" —
+    /// Server paths look like "Amino Acids & Peptides > BIOMEDICAL IMPORTANCE > ..." —
     /// the segment before " > " is the subject, the rest is the topic name.
     static func fromServerPath(_ path: String) -> QuizTopic {
         let parts = path.components(separatedBy: " > ")

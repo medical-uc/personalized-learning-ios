@@ -214,7 +214,7 @@ enum FlashcardData {
         .init(icon: "clock", label: "Time Spent", value: "32m")
     ]
 
-    static let deckName = "Cardiology Essentials"
+    static let deckName = "Biochemistry Essentials"
     static let deckCardCount = 200
     static let deckProgress = 0.63
 
