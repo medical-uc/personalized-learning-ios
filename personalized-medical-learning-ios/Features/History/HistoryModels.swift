@@ -7,7 +7,7 @@ import SwiftUI
 
 struct HistoryItem: Decodable {
     let sessionId: String
-    let topicPath: String
+    let topicPath: String?
     let questionCount: Int
     let correctCount: Int
     let scorePercent: Int
@@ -52,9 +52,10 @@ private let historyTints: [Color] = [.red, .orange, .pink, .blue, .teal, .purple
 
 extension HistoryEntry {
     init(item: HistoryItem) {
+        let topicPath = item.topicPath ?? "Mixed Review"
         self.id = item.sessionId
-        self.subject = item.topicPath.capitalized
-        self.tint = historyTints[abs(item.topicPath.hashValue) % historyTints.count]
+        self.subject = topicPath.capitalized
+        self.tint = historyTints[abs(topicPath.hashValue) % historyTints.count]
         self.questionCount = item.questionCount
         self.accuracy = item.scorePercent
         self.duration = HistoryEntry.durationText(seconds: item.durationSeconds)
