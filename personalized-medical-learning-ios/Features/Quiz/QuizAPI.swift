@@ -7,7 +7,7 @@ import Foundation
 
 extension APIClient {
     func getQuestions(topicPath: String) async throws -> [QuestionOut] {
-        try await get(path: "quiz/topics/\(topicPath)/questions")
+        try await get(path: "subjects/\(topicPath)/questions")
     }
 
     func getAllQuestions() async throws -> [QuestionOut] {
