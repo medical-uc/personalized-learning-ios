@@ -10,11 +10,17 @@ struct QuizSetupView: View {
     /// "Practice Now" on the dashboard's Focus Areas card, which already knows the
     /// topic and just needs the learner to confirm before starting.
     var preselectedTopicPath: String?
+    /// Skips topic selection and shows a due-for-review preview (count + settings)
+    /// instead of the topic-based one — mirrors FlashcardSetupView's startWithAllDue.
+    var startWithAllDue: Bool = false
     var onBack: () -> Void = {}
     /// Up to 3 topics — the question-selection algorithm (QuizViewModel) draws from all
     /// of them and weights toward whichever the student is weakest in, rather than a
     /// single fixed topic.
     var onStart: ([QuizTopic], QuizSettings) -> Void = { _, _ in }
+    /// Confirmed from the due-review preview (startWithAllDue) — starts the cross-topic
+    /// due batch instead of a topic-scoped session.
+    var onStartDueBatch: (QuizSettings) -> Void = { _ in }
 
     static let maxTopics = 3
 
@@ -23,11 +29,19 @@ struct QuizSetupView: View {
     @State private var selectedTopicIDs: Set<String>
     @State private var settings = QuizSettings()
 
-    init(preselectedTopicPath: String? = nil, onBack: @escaping () -> Void = {}, onStart: @escaping ([QuizTopic], QuizSettings) -> Void = { _, _ in }) {
+    init(
+        preselectedTopicPath: String? = nil,
+        startWithAllDue: Bool = false,
+        onBack: @escaping () -> Void = {},
+        onStart: @escaping ([QuizTopic], QuizSettings) -> Void = { _, _ in },
+        onStartDueBatch: @escaping (QuizSettings) -> Void = { _ in }
+    ) {
         self.preselectedTopicPath = preselectedTopicPath
+        self.startWithAllDue = startWithAllDue
         self.onBack = onBack
         self.onStart = onStart
-        _currentStep = State(initialValue: preselectedTopicPath == nil ? .topics : .start)
+        self.onStartDueBatch = onStartDueBatch
+        _currentStep = State(initialValue: (preselectedTopicPath == nil && !startWithAllDue) ? .topics : .start)
         _selectedTopicIDs = State(initialValue: preselectedTopicPath.map { Set([$0]) } ?? [])
     }
 
@@ -65,7 +79,11 @@ struct QuizSetupView: View {
             }
         }
         .task {
-            await viewModel.loadTopics()
+            if startWithAllDue {
+                await viewModel.loadDueCount()
+            } else {
+                await viewModel.loadTopics()
+            }
         }
     }
 
@@ -82,7 +100,16 @@ struct QuizSetupView: View {
                 onRetry: { Task { await viewModel.loadTopics() } }
             )
         case .start:
-            if !selectedTopics.isEmpty {
+            if startWithAllDue {
+                QuizDuePreviewStepView(
+                    dueCount: viewModel.dueCount,
+                    isLoading: viewModel.isLoadingDueCount,
+                    errorMessage: viewModel.dueCountErrorMessage,
+                    settings: $settings,
+                    onRetry: { Task { await viewModel.loadDueCount() } },
+                    onBegin: { onStartDueBatch(settings) }
+                )
+            } else if !selectedTopics.isEmpty {
                 QuizPreviewStepView(
                     topics: selectedTopics,
                     settings: $settings,
@@ -186,6 +213,82 @@ private struct QuizPreviewStepView: View {
         .padding(20)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+/// Preview step for the cross-topic due-review batch (started from the dashboard's
+/// Due for Review card) — no topic list to edit since the batch spans every topic with
+/// something due, so this just confirms the count before starting.
+private struct QuizDuePreviewStepView: View {
+    let dueCount: Int?
+    let isLoading: Bool
+    let errorMessage: String?
+    @Binding var settings: QuizSettings
+    var onRetry: () -> Void
+    var onBegin: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if let errorMessage {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                    Button("Retry", action: onRetry)
+                        .font(.subheadline.weight(.semibold))
+                }
+            } else {
+                HStack(spacing: 0) {
+                    PreviewStatTile(
+                        icon: "arrow.clockwise",
+                        tint: .orange,
+                        value: isLoading ? "…" : "\(dueCount ?? 0)",
+                        label: "Due Now"
+                    )
+                    PreviewStatTile(icon: "clock.fill", tint: .blue, value: totalTimeText, label: "Total Time")
+                }
+                .padding(.vertical, 4)
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
+
+                Text("Questions you've answered before, due for a spaced-repetition review, across every topic.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Divider()
+
+                SettingRow(title: "Review Mode", subtitle: "See explanations after each question") {
+                    Toggle("", isOn: $settings.isReviewModeEnabled)
+                        .labelsHidden()
+                        .tint(Theme.dark)
+                }
+
+                Button(action: onBegin) {
+                    HStack(spacing: 6) {
+                        Text("Begin Quiz")
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Theme.dark)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .disabled(isLoading || (dueCount ?? 0) == 0)
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var totalTimeText: String {
+        guard settings.isTimerEnabled, let dueCount else { return "—" }
+        let totalSeconds = settings.secondsPerQuestion * dueCount
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return seconds == 0 ? "\(minutes) min" : "\(minutes)m \(seconds)s"
     }
 }
 

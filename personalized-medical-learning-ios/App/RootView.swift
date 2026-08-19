@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var isQuizInProgress = false
     @State private var pendingSelection: SidebarItem?
     @State private var preselectedSetupTopicPath: String?
+    @State private var quizSetupStartsWithAllDue = false
     @State private var energyToastAmount: Int?
     @State private var isFlashcardSessionStarted = false
     @State private var isFlashcardProgressUnsaved = false
@@ -33,6 +34,10 @@ struct RootView: View {
         } else if isFlashcardProgressUnsaved && selection == .flashcards {
             pendingFlashcardSelection = item
         } else {
+            if selection == .quiz && !isBatchQuizStarted && activeTopicPath == nil && activeTopicPaths == nil {
+                preselectedSetupTopicPath = nil
+                quizSetupStartsWithAllDue = false
+            }
             selection = item
         }
     }
@@ -54,9 +59,12 @@ struct RootView: View {
                             case .quiz:
                                 // No per-topic due-only quiz mode yet — always the
                                 // cross-topic due batch regardless of which row was tapped.
+                                // Routes through QuizSetupView's due-preview step rather
+                                // than starting the session immediately.
                                 activeTopicPath = nil
                                 activeTopicPaths = nil
-                                isBatchQuizStarted = true
+                                isBatchQuizStarted = false
+                                quizSetupStartsWithAllDue = true
                                 selection = .quiz
                             case .flashcard:
                                 if let topicPath = request.topicPath {
@@ -106,8 +114,10 @@ struct RootView: View {
                     } else {
                         QuizSetupView(
                             preselectedTopicPath: preselectedSetupTopicPath,
+                            startWithAllDue: quizSetupStartsWithAllDue,
                             onBack: {
                                 preselectedSetupTopicPath = nil
+                                quizSetupStartsWithAllDue = false
                                 selection = .dashboard
                             },
                             onStart: { topics, settings in
@@ -118,6 +128,11 @@ struct RootView: View {
                                     activeTopicPaths = topics.map(\.path)
                                 }
                                 activeQuestionCount = settings.questionCount
+                                activeReviewModeEnabled = settings.isReviewModeEnabled
+                            },
+                            onStartDueBatch: { settings in
+                                quizSetupStartsWithAllDue = false
+                                isBatchQuizStarted = true
                                 activeReviewModeEnabled = settings.isReviewModeEnabled
                             }
                         )

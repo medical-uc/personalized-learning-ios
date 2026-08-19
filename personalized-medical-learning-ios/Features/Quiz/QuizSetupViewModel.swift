@@ -12,6 +12,10 @@ final class QuizSetupViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
 
+    @Published private(set) var dueCount: Int?
+    @Published private(set) var isLoadingDueCount = false
+    @Published var dueCountErrorMessage: String?
+
     private let client: any APIClientProtocol
 
     init(client: any APIClientProtocol = APIClient.shared) {
@@ -29,6 +33,18 @@ final class QuizSetupViewModel: ObservableObject {
             topics = paths.map(QuizTopic.fromServerPath)
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func loadDueCount() async {
+        dueCountErrorMessage = nil
+        isLoadingDueCount = true
+        defer { isLoadingDueCount = false }
+
+        do {
+            dueCount = try await client.getDueForReview().count
+        } catch {
+            dueCountErrorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
     }
 }
