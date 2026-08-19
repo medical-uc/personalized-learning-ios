@@ -14,6 +14,7 @@ struct FlashcardView: View {
     @StateObject private var viewModel = FlashcardViewModel()
     @State private var isFlipped = false
     @State private var showExitConfirm = false
+    @State private var showEndSessionConfirm = false
 
     private func requestExit() {
         if viewModel.hasUnsavedProgress {
@@ -39,7 +40,7 @@ struct FlashcardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FlashcardHeaderView(onBack: requestExit, onEndSession: endSession)
+                FlashcardHeaderView(onBack: requestExit)
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -54,13 +55,17 @@ struct FlashcardView: View {
                         FlashcardMainCard(isFlipped: $isFlipped, viewModel: viewModel)
                             .frame(maxWidth: .infinity)
 
-                        FlashcardSidePanelView(viewModel: viewModel)
-                            .frame(width: 320)
+                        FlashcardSidePanelView(viewModel: viewModel) {
+                            showEndSessionConfirm = true
+                        }
+                        .frame(width: 320)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 20) {
                         FlashcardMainCard(isFlipped: $isFlipped, viewModel: viewModel)
-                        FlashcardSidePanelView(viewModel: viewModel)
+                        FlashcardSidePanelView(viewModel: viewModel) {
+                            showEndSessionConfirm = true
+                        }
                     }
                 }
             }
@@ -76,6 +81,15 @@ struct FlashcardView: View {
             Button("Keep Going", role: .cancel) {}
         } message: {
             Text("Your progress on this session will be lost if you leave now.")
+        }
+        .alert(
+            "End session?",
+            isPresented: $showEndSessionConfirm
+        ) {
+            Button("End Session", role: .destructive, action: endSession)
+            Button("Keep Going", role: .cancel) {}
+        } message: {
+            Text("Your progress so far will be saved. You can start a new session anytime.")
         }
         .task {
             await viewModel.loadCards(topicPath: topicPath)
@@ -121,10 +135,6 @@ private struct FlashcardErrorView: View {
 
 private struct FlashcardHeaderView: View {
     var onBack: () -> Void = {}
-    var onEndSession: () -> Void = {}
-
-    @State private var isProgressPresented = false
-    @State private var showEndSessionConfirm = false
 
     var body: some View {
         HStack {
@@ -138,49 +148,8 @@ private struct FlashcardHeaderView: View {
             }
 
             Spacer()
-
-            Button {
-                isProgressPresented = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chart.pie")
-                    Text("Progress")
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.dark)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .popover(isPresented: $isProgressPresented) {
-                FlashcardProgressPopoverContent()
-            }
-
-            Menu {
-                Button(role: .destructive) {
-                    showEndSessionConfirm = true
-                } label: {
-                    Label("End Session", systemImage: "stop.circle")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(Theme.dark)
-                    .frame(width: 40, height: 40)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
         }
         .padding(.top, 24)
-        .alert(
-            "End session?",
-            isPresented: $showEndSessionConfirm
-        ) {
-            Button("End Session", role: .destructive, action: onEndSession)
-            Button("Keep Going", role: .cancel) {}
-        } message: {
-            Text("Your progress so far will be saved. You can start a new session anytime.")
-        }
     }
 }
 
