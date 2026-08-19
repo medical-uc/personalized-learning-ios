@@ -49,16 +49,23 @@ struct RootView: View {
                             preselectedSetupTopicPath = topic.path
                             selection = .quiz
                         },
-                        onReviewDue: { soonestDue in
-                            switch soonestDue.source {
+                        onReviewDue: { request in
+                            switch request.source {
                             case .quiz:
+                                // No per-topic due-only quiz mode yet — always the
+                                // cross-topic due batch regardless of which row was tapped.
                                 activeTopicPath = nil
                                 activeTopicPaths = nil
                                 isBatchQuizStarted = true
                                 selection = .quiz
                             case .flashcard:
-                                preselectedFlashcardSetupTopicPath = nil
-                                flashcardSetupStartsWithAllDue = true
+                                if let topicPath = request.topicPath {
+                                    preselectedFlashcardSetupTopicPath = topicPath
+                                    flashcardSetupStartsWithAllDue = false
+                                } else {
+                                    preselectedFlashcardSetupTopicPath = nil
+                                    flashcardSetupStartsWithAllDue = true
+                                }
                                 selection = .flashcards
                             }
                         }

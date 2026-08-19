@@ -12,6 +12,7 @@ final class NudgeViewModel: ObservableObject {
     @Published private(set) var flashcardDueCount = 0
     @Published private(set) var totalDueCount = 0
     @Published private(set) var soonestDue: NudgePreviewItem?
+    @Published private(set) var breakdown: [NudgeTopicBreakdown] = []
     @Published private(set) var isLoading = false
 
     private let client: any APIClientProtocol
@@ -30,11 +31,13 @@ final class NudgeViewModel: ObservableObject {
             flashcardDueCount = response.flashcardDueCount
             totalDueCount = response.totalDueCount
             soonestDue = response.soonestDue
+            breakdown = response.breakdown
         } catch {
             quizDueCount = 0
             flashcardDueCount = 0
             totalDueCount = 0
             soonestDue = nil
+            breakdown = []
         }
     }
 }

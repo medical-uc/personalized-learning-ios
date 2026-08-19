@@ -7,12 +7,13 @@ import SwiftUI
 
 struct DashboardView: View {
     var onPracticeTopic: (QuizTopic) -> Void = { _ in }
-    var onReviewDue: (NudgePreviewItem) -> Void = { _ in }
+    var onReviewDue: (ReviewRequest) -> Void = { _ in }
 
     @StateObject private var streakViewModel = StreakViewModel()
     @StateObject private var nudgeViewModel = NudgeViewModel()
     @State private var showBrokenStreakSheet = false
     @State private var showStreakCalendar = false
+    @State private var showDueForReviewSheet = false
 
     var body: some View {
         ScrollView {
@@ -26,11 +27,7 @@ struct DashboardView: View {
                         totalDueCount: nudgeViewModel.totalDueCount,
                         soonestDue: nudgeViewModel.soonestDue
                     )
-                    .onTapGesture {
-                        if let soonestDue = nudgeViewModel.soonestDue {
-                            onReviewDue(soonestDue)
-                        }
-                    }
+                    .onTapGesture { showDueForReviewSheet = true }
                 }
 
                 DashboardTopCardsLayout {
@@ -68,6 +65,17 @@ struct DashboardView: View {
                 currentStreak: streakViewModel.currentStreak,
                 activityDates: streakViewModel.activityDates
             )
+        }
+        .sheet(isPresented: $showDueForReviewSheet) {
+            DueForReviewSheet(
+                totalDueCount: nudgeViewModel.totalDueCount,
+                breakdown: nudgeViewModel.breakdown,
+                onReviewTopic: { item in
+                    showDueForReviewSheet = false
+                    onReviewDue(item)
+                }
+            )
+            .presentationDetents([.medium, .large])
         }
     }
 }

@@ -130,16 +130,35 @@ struct NudgePreviewItem: Decodable {
     }
 }
 
+struct NudgeTopicBreakdown: Decodable, Identifiable {
+    let source: NudgeSource
+    let topicPath: String
+    let dueCount: Int
+
+    var id: String { "\(source.rawValue)|\(topicPath)" }
+
+    var subjectName: String { topicPath.components(separatedBy: " > ").first ?? topicPath }
+    var topicName: String { topicPath.components(separatedBy: " > ").last ?? topicPath }
+
+    enum CodingKeys: String, CodingKey {
+        case source
+        case topicPath = "topic_path"
+        case dueCount = "due_count"
+    }
+}
+
 struct NudgeResponse: Decodable {
     let quizDueCount: Int
     let flashcardDueCount: Int
     let totalDueCount: Int
     let soonestDue: NudgePreviewItem?
+    let breakdown: [NudgeTopicBreakdown]
 
     enum CodingKeys: String, CodingKey {
         case quizDueCount = "quiz_due_count"
         case flashcardDueCount = "flashcard_due_count"
         case totalDueCount = "total_due_count"
         case soonestDue = "soonest_due"
+        case breakdown
     }
 }
