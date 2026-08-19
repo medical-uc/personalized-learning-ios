@@ -10,7 +10,11 @@ struct FlashcardSidePanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            DeckCard()
+            if !viewModel.cards.isEmpty {
+                Text("Card \(viewModel.currentIndex + 1) of \(viewModel.cards.count)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
             QuickActionsCard()
             NavigationCard(viewModel: viewModel)
         }
@@ -97,38 +101,6 @@ private struct TodayStatsCard: View {
                         Text(stat.value).font(.subheadline.weight(.semibold))
                     }
                 }
-            }
-        }
-        .padding(18)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-}
-
-private struct DeckCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Deck").font(.headline)
-
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Theme.mint)
-                    .frame(width: 56, height: 56)
-                    .overlay(Image(systemName: "atom").foregroundStyle(.purple))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(FlashcardData.deckName).font(.subheadline.weight(.semibold))
-                    Text("\(FlashcardData.deckCardCount) cards").font(.caption2).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-
-            VStack(alignment: .trailing, spacing: 6) {
-                ProgressView(value: FlashcardData.deckProgress)
-                    .tint(Theme.dark)
-                Text("\(Int(FlashcardData.deckProgress * 100))%")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(18)

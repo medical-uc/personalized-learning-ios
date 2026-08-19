@@ -31,7 +31,7 @@ struct FlashcardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FlashcardHeaderView(onBack: requestExit, viewModel: viewModel)
+                FlashcardHeaderView(onBack: requestExit)
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -113,7 +113,6 @@ private struct FlashcardErrorView: View {
 
 private struct FlashcardHeaderView: View {
     var onBack: () -> Void = {}
-    @ObservedObject var viewModel: FlashcardViewModel
 
     @State private var isProgressPresented = false
 
@@ -126,19 +125,6 @@ private struct FlashcardHeaderView: View {
                 }
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.dark)
-            }
-
-            Spacer()
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Flashcards")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.dark)
-                if !viewModel.cards.isEmpty {
-                    Text("Card \(viewModel.currentIndex + 1) of \(viewModel.cards.count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Spacer()

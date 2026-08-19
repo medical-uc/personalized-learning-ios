@@ -214,10 +214,6 @@ enum FlashcardData {
         .init(icon: "clock", label: "Time Spent", value: "32m")
     ]
 
-    static let deckName = "Biochemistry Essentials"
-    static let deckCardCount = 200
-    static let deckProgress = 0.63
-
     static let quickActions: [QuickActionItem] = [
         .init(icon: "shuffle", title: "Shuffle Deck"),
         .init(icon: "square.grid.2x2", title: "Browse by Topic"),
