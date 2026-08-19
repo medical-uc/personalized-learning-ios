@@ -28,10 +28,18 @@ struct FlashcardView: View {
         onBack()
     }
 
+    private func endSession() {
+        Task {
+            await viewModel.finishSession()
+            onProgressChange(false)
+            onBack()
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FlashcardHeaderView(onBack: requestExit)
+                FlashcardHeaderView(onBack: requestExit, onEndSession: endSession)
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -113,8 +121,10 @@ private struct FlashcardErrorView: View {
 
 private struct FlashcardHeaderView: View {
     var onBack: () -> Void = {}
+    var onEndSession: () -> Void = {}
 
     @State private var isProgressPresented = false
+    @State private var showEndSessionConfirm = false
 
     var body: some View {
         HStack {
@@ -147,7 +157,13 @@ private struct FlashcardHeaderView: View {
                 FlashcardProgressPopoverContent()
             }
 
-            Button {} label: {
+            Menu {
+                Button(role: .destructive) {
+                    showEndSessionConfirm = true
+                } label: {
+                    Label("End Session", systemImage: "stop.circle")
+                }
+            } label: {
                 Image(systemName: "ellipsis")
                     .foregroundStyle(Theme.dark)
                     .frame(width: 40, height: 40)
@@ -156,6 +172,15 @@ private struct FlashcardHeaderView: View {
             }
         }
         .padding(.top, 24)
+        .alert(
+            "End session?",
+            isPresented: $showEndSessionConfirm
+        ) {
+            Button("End Session", role: .destructive, action: onEndSession)
+            Button("Keep Going", role: .cancel) {}
+        } message: {
+            Text("Your progress so far will be saved. You can start a new session anytime.")
+        }
     }
 }
 
