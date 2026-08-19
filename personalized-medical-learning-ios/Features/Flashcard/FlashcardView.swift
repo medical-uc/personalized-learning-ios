@@ -8,15 +8,30 @@ import SwiftUI
 struct FlashcardView: View {
     var topicPath: String?
     var onBack: () -> Void = {}
+    var onProgressChange: (Bool) -> Void = { _ in }
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var viewModel = FlashcardViewModel()
     @State private var isFlipped = false
+    @State private var showExitConfirm = false
+
+    private func requestExit() {
+        if viewModel.hasUnsavedProgress {
+            showExitConfirm = true
+        } else {
+            onBack()
+        }
+    }
+
+    private func confirmExit() {
+        onProgressChange(false)
+        onBack()
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                FlashcardHeaderView(viewModel: viewModel)
+                FlashcardHeaderView(onBack: requestExit, viewModel: viewModel)
 
                 if viewModel.isLoading {
                     ProgressView("Loading cards…")
@@ -45,11 +60,24 @@ struct FlashcardView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.bg)
+        .alert(
+            "Leave flashcards?",
+            isPresented: $showExitConfirm
+        ) {
+            Button("Leave", role: .destructive, action: confirmExit)
+            Button("Keep Going", role: .cancel) {}
+        } message: {
+            Text("Your progress on this session will be lost if you leave now.")
+        }
         .task {
             await viewModel.loadCards(topicPath: topicPath)
+            onProgressChange(viewModel.hasUnsavedProgress)
         }
         .onChange(of: viewModel.currentIndex) {
             isFlipped = false
+        }
+        .onChange(of: viewModel.hasUnsavedProgress) {
+            onProgressChange(viewModel.hasUnsavedProgress)
         }
         .onDisappear {
             viewModel.cancelSession()
@@ -84,12 +112,24 @@ private struct FlashcardErrorView: View {
 }
 
 private struct FlashcardHeaderView: View {
+    var onBack: () -> Void = {}
     @ObservedObject var viewModel: FlashcardViewModel
 
     @State private var isProgressPresented = false
 
     var body: some View {
         HStack {
+            Button(action: onBack) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.left")
+                    Text("Back to Dashboard")
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.dark)
+            }
+
+            Spacer()
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("Flashcards")
                     .font(.subheadline.weight(.semibold))

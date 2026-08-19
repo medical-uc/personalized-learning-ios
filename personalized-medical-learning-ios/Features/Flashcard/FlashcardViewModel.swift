@@ -28,6 +28,10 @@ final class FlashcardViewModel: ObservableObject {
 
     var totalCards: Int { cards.count }
 
+    var hasUnsavedProgress: Bool {
+        sessionId != nil && !hasEnded && cards.contains { $0.rating != nil }
+    }
+
     func loadCards(topicPath: String? = nil) async {
         errorMessage = nil
         isLoading = true

@@ -19,15 +19,19 @@ struct RootView: View {
     @State private var preselectedSetupTopicPath: String?
     @State private var energyToastAmount: Int?
     @State private var isFlashcardSessionStarted = false
+    @State private var isFlashcardProgressUnsaved = false
     @State private var activeFlashcardTopicPath: String?
     @State private var preselectedFlashcardSetupTopicPath: String?
     @State private var flashcardSetupStartsWithAllDue = false
     @State private var isOffline = !Reachability.shared.isOnline
+    @State private var pendingFlashcardSelection: SidebarItem?
 
     private func requestSelect(_ item: SidebarItem) {
         guard item != selection else { return }
         if isQuizInProgress && selection == .quiz {
             pendingSelection = item
+        } else if isFlashcardProgressUnsaved && selection == .flashcards {
+            pendingFlashcardSelection = item
         } else {
             selection = item
         }
@@ -113,13 +117,18 @@ struct RootView: View {
                     }
                 case .flashcards:
                     if isFlashcardSessionStarted {
-                        FlashcardView(topicPath: activeFlashcardTopicPath, onBack: {
-                            isFlashcardSessionStarted = false
-                            activeFlashcardTopicPath = nil
-                        })
+                        FlashcardView(
+                            topicPath: activeFlashcardTopicPath,
+                            onBack: {
+                                isFlashcardSessionStarted = false
+                                activeFlashcardTopicPath = nil
+                            },
+                            onProgressChange: { isFlashcardProgressUnsaved = $0 }
+                        )
                         .onDisappear {
                             isFlashcardSessionStarted = false
                             activeFlashcardTopicPath = nil
+                            isFlashcardProgressUnsaved = false
                         }
                     } else {
                         FlashcardSetupView(
@@ -175,6 +184,28 @@ struct RootView: View {
             }
         } message: {
             Text("Your progress on this quiz will be lost if you leave now.")
+        }
+        .alert(
+            "Leave flashcards?",
+            isPresented: Binding(
+                get: { pendingFlashcardSelection != nil },
+                set: { if !$0 { pendingFlashcardSelection = nil } }
+            )
+        ) {
+            Button("Leave", role: .destructive) {
+                isFlashcardProgressUnsaved = false
+                isFlashcardSessionStarted = false
+                activeFlashcardTopicPath = nil
+                if let pendingFlashcardSelection {
+                    selection = pendingFlashcardSelection
+                }
+                pendingFlashcardSelection = nil
+            }
+            Button("Keep Going", role: .cancel) {
+                pendingFlashcardSelection = nil
+            }
+        } message: {
+            Text("Your progress on this session will be lost if you leave now.")
         }
         .overlay(alignment: .top) {
             VStack(spacing: 8) {
