@@ -171,8 +171,6 @@ struct RootView: View {
                     }
                 case .subjects:
                     SubjectsView(onBack: { selection = .dashboard })
-                case .bookmarks:
-                    BookmarkView(onBack: { selection = .dashboard })
                 case .history:
                     HistoryView(onBack: { selection = .dashboard })
                 case .settings:

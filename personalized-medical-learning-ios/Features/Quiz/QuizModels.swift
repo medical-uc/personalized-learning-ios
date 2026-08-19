@@ -46,7 +46,6 @@ struct QuizQuestion: Identifiable {
     let explanationTitle: String
     var explanationBody: String
     let reference: String
-    var isBookmarked: Bool
 
     /// Leaf topic_path for this question's BKT entry — same " > "-joined shape
     /// MasteryEntry.topicPath already uses, so BKTStore keys line up with zero
@@ -91,7 +90,6 @@ extension QuizQuestion {
         self.explanationTitle = "Explanation"
         self.explanationBody = ""
         self.reference = questionOut.topicTag.joined(separator: " / ")
-        self.isBookmarked = false
     }
 }
 
@@ -275,7 +273,6 @@ enum QuizData {
         selectedIndex: 0,
         explanationTitle: "Explanation",
         explanationBody: "Beta-blockers reduce heart rate and cardiac output by blocking β1-adrenergic receptors in the heart. This decreases the force and rate of contraction, leading to lower blood pressure.",
-        reference: "Katzung & Trevor's Pharmacology, 15th Edition",
-        isBookmarked: false
+        reference: "Katzung & Trevor's Pharmacology, 15th Edition"
     )
 }

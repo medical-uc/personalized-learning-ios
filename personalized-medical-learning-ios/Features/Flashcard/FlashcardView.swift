@@ -148,14 +148,6 @@ private struct FlashcardHeaderView: View {
             }
 
             Button {} label: {
-                Image(systemName: "bookmark")
-                    .foregroundStyle(Theme.dark)
-                    .frame(width: 40, height: 40)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            Button {} label: {
                 Image(systemName: "ellipsis")
                     .foregroundStyle(Theme.dark)
                     .frame(width: 40, height: 40)

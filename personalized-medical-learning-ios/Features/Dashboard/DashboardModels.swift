@@ -10,7 +10,6 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     case quiz = "Quiz"
     case subjects = "Subjects"
     case flashcards = "Flashcards"
-    case bookmarks = "Bookmarks"
     case history = "History"
     case settings = "Settings"
 
@@ -22,7 +21,6 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .quiz: return "questionmark.circle"
         case .subjects: return "book"
         case .flashcards: return "rectangle.stack"
-        case .bookmarks: return "bookmark"
         case .history: return "clock"
         case .settings: return "gearshape"
         }

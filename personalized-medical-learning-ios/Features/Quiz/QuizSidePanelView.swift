@@ -108,7 +108,6 @@ struct QuestionNavigatorCard: View {
                 LegendRow(icon: "checkmark.circle.fill", tint: .green, text: "Correct")
                 LegendRow(icon: "xmark.circle.fill", tint: .red, text: "Incorrect")
                 LegendRow(icon: "circle", tint: .secondary, text: "Unanswered")
-                LegendRow(icon: "bookmark.fill", tint: Theme.dark, text: "Bookmarked")
             }
 
             LazyVGrid(columns: columns, spacing: 10) {

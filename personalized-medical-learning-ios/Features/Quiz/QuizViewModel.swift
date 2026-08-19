@@ -360,9 +360,4 @@ final class QuizViewModel: ObservableObject {
             reviewQuestions: isReviewModeEnabled ? [] : questions
         )
     }
-
-    func toggleBookmark() {
-        guard questions.indices.contains(currentIndex) else { return }
-        questions[currentIndex].isBookmarked.toggle()
-    }
 }

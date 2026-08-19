@@ -48,16 +48,6 @@ struct QuizHeaderView: View {
                 QuizNavigatorPopoverContent(viewModel: viewModel)
             }
 
-            Button {
-                viewModel.toggleBookmark()
-            } label: {
-                Image(systemName: viewModel.currentQuestion?.isBookmarked == true ? "bookmark.fill" : "bookmark")
-                    .foregroundStyle(Theme.dark)
-                    .frame(width: 40, height: 40)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
             Button {} label: {
                 Image(systemName: "ellipsis")
                     .foregroundStyle(Theme.dark)
