@@ -29,7 +29,7 @@ final class FlashcardViewModel: ObservableObject {
     var totalCards: Int { cards.count }
 
     var hasUnsavedProgress: Bool {
-        sessionId != nil && !hasEnded && cards.contains { $0.rating != nil }
+        sessionId != nil && !hasEnded
     }
 
     func loadCards(topicPath: String? = nil) async {
