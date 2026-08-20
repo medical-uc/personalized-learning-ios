@@ -41,8 +41,10 @@ final class FlashcardViewModel: ObservableObject {
         do {
             async let cardsTask = client.getAllCards()
             async let dueTask = client.getDueFlashcards()
-            async let sessionTask = client.startFlashcardSession(topicPath: topicPath, size: nil)
-            let (out, due, session) = try await (cardsTask, dueTask, sessionTask)
+            let (out, due) = try await (cardsTask, dueTask)
+
+            let sessionSize = min(max(due.count, 1), 200)
+            let session = try await client.startFlashcardSession(topicPath: topicPath, size: sessionSize)
 
             let byUid = Dictionary(uniqueKeysWithValues: out.map { ($0.uid, $0) })
             let sessionCards = session.cardUids.compactMap { byUid[$0] }

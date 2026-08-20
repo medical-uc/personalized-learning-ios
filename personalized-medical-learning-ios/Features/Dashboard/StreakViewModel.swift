@@ -10,7 +10,7 @@ import Combine
 final class StreakViewModel: ObservableObject {
     @Published private(set) var currentStreak = 0
     @Published private(set) var weekActivity = [Bool](repeating: false, count: 7)
-    /// Every day (start-of-day, local calendar) the student had activity, from the
+    /// Every day (start-of-day, local calendar) the student had activity, from the 
     /// backend's activity_dates — full history, not just the 7-day week_activity window.
     /// Backs the streak calendar's month grid.
     @Published private(set) var activityDates: Set<Date> = []
