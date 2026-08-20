@@ -293,7 +293,12 @@ private struct DayStreakCard: View {
                             ZStack {
                                 Circle()
                                     .fill(isChecked(index) ? Theme.dark : Color.white)
-                                    .overlay(Circle().stroke(Theme.dark.opacity(index == todayIndex ? 1 : 0), lineWidth: 2))
+                                    .overlay(
+                                        Circle().stroke(
+                                            Theme.dark.opacity(index == todayIndex ? 1 : 0.2),
+                                            lineWidth: 2
+                                        )
+                                    )
                                     .frame(width: 32, height: 32)
                                 if isChecked(index) {
                                     Image(systemName: "checkmark")
@@ -391,6 +396,8 @@ private struct FocusAreaRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+
+            Spacer(minLength: 8)
 
             Text(entry.statusLabel)
                 .font(.caption.weight(.semibold))
